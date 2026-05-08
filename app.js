@@ -1,6 +1,3 @@
-
-
-<script>
 const SUPABASE_URL = 'https://mrivfwlxnmtgkifjucvd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yaXZmd2x4bm10Z2tpZmp1Y3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyMTYzMjQsImV4cCI6MjA5Mzc5MjMyNH0.6u1Ki6MTH14tlIUsegfNKo7BuVceBDgUhTnLUcirdVk';
 
@@ -29,12 +26,6 @@ async function loadProjects() {
   renderSidebar();
   renderProjects();
 }
-
-const supabaseClient = supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY
-);
-
 
 
 const SL={ready:'Ready to start',ongoing:'Ongoing',review:'In review',sent:'Sent to client',done:'Done',hold:'On hold'};
@@ -425,4 +416,3 @@ document.getElementById('filter-imp').onchange=renderProjects;
 document.getElementById('sort-by').onchange=renderProjects;
 
 loadProjects();
-</script>
