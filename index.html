@@ -1,95 +1,134 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
-<title>La fabrique v2</title>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>La fabrique — Gestion de projets</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Tabler Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
 
 <div id="app">
-  <div id="header">
+
+  <!-- HEADER -->
+  <header id="header">
     <div class="logo">
       <div class="logo-icon">✦</div>
-      <div style="display:flex;align-items:baseline;gap:6px">
+      <div class="logo-text">
         <span class="logo-name">La fabrique</span>
         <span class="logo-tagline">gestion de projets</span>
       </div>
     </div>
-  </div>
+    <div id="header-status">
+      <span id="db-status" class="db-status connecting">
+        <i class="ti ti-database"></i>
+        <span id="db-status-text">Connexion…</span>
+      </span>
+    </div>
+  </header>
 
   <div id="body">
-    <div id="sidebar">
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar">
       <div class="cat-section">
         <div class="cat-label">Pro</div>
-        <div id="yl-pro"></div>
+        <div id="yl-pro" class="year-list"></div>
       </div>
       <div class="cat-divider"></div>
       <div class="cat-section">
         <div class="cat-label">Perso</div>
-        <div id="yl-perso"></div>
+        <div id="yl-perso" class="year-list"></div>
       </div>
-    </div>
+    </aside>
 
-    <div id="main">
+    <!-- MAIN -->
+    <main id="main">
       <div id="topbar">
         <span id="topbar-title">Pro · 2026</span>
-        <div id="search-wrap"><i class="ti ti-search" aria-hidden="true"></i><input type="text" id="search" placeholder="Rechercher..."></div>
-        <select class="filter" id="filter-status">
+        <div id="search-wrap">
+          <i class="ti ti-search"></i>
+          <input type="text" id="search" placeholder="Rechercher…" />
+        </div>
+        <select id="filter-status" class="filter">
           <option value="">Statut</option>
           <option value="ready">Ready</option>
           <option value="ongoing">Ongoing</option>
-          <option value="review">Review</option>
+          <option value="review">In review</option>
           <option value="sent">Sent</option>
           <option value="done">Done</option>
-          <option value="hold">Hold</option>
+          <option value="hold">On hold</option>
         </select>
-        <select class="filter" id="filter-imp">
+        <select id="filter-imp" class="filter">
           <option value="">Imp.</option>
           <option value="high">High</option>
           <option value="medium">Med</option>
           <option value="low">Low</option>
         </select>
-        <select class="filter" id="sort-by">
+        <select id="sort-by" class="filter">
           <option value="updated">↓ Update</option>
           <option value="number">Numéro</option>
           <option value="name">Nom</option>
           <option value="deadline">Deadline</option>
           <option value="progress">%</option>
         </select>
-        <button class="btn-add" id="btn-new"><i class="ti ti-plus" aria-hidden="true"></i>Nouveau</button>
+        <button id="btn-new" class="btn-primary">
+          <i class="ti ti-plus"></i>Nouveau
+        </button>
       </div>
+
       <div id="project-list"></div>
-    </div>
+    </main>
   </div>
 
+  <!-- MODAL -->
   <div id="modal-overlay">
     <div id="modal">
-      <h2 id="modal-title"><i class="ti ti-folder" aria-hidden="true"></i>Nouveau projet</h2>
+      <h2 id="modal-title"><i class="ti ti-folder"></i>Nouveau projet</h2>
+
       <div class="form-row">
-        <div class="fg"><label>Numéro</label><input type="text" id="f-num" placeholder="2026_0001"></div>
-        <div class="fg"><label>Catégorie</label><select id="f-cat"><option value="pro">Pro</option><option value="perso">Perso</option></select></div>
+        <div class="fg">
+          <label>Numéro</label>
+          <input type="text" id="f-num" placeholder="2026_0001" />
+        </div>
+        <div class="fg">
+          <label>Catégorie</label>
+          <select id="f-cat">
+            <option value="pro">Pro</option>
+            <option value="perso">Perso</option>
+          </select>
+        </div>
       </div>
-      <div class="fg"><label>Nom du projet</label><input type="text" id="f-name" placeholder="Nom du projet"></div>
+
+      <div class="fg">
+        <label>Nom du projet</label>
+        <input type="text" id="f-name" placeholder="Nom du projet" />
+      </div>
+
       <div class="form-row">
         <div class="fg">
           <label>Éditeur</label>
           <div class="ac-wrap">
-            <input type="text" id="f-editor" placeholder="Éditeur..." autocomplete="off">
-            <div id="editor-suggest"></div>
+            <input type="text" id="f-editor" placeholder="Éditeur…" autocomplete="off" />
+            <div id="editor-suggest" class="ac-suggest"></div>
           </div>
         </div>
         <div class="fg">
           <label>Client</label>
           <div class="ac-wrap">
-            <input type="text" id="f-client" placeholder="Client..." autocomplete="off">
-            <div id="client-suggest"></div>
+            <input type="text" id="f-client" placeholder="Client…" autocomplete="off" />
+            <div id="client-suggest" class="ac-suggest"></div>
           </div>
         </div>
       </div>
+
       <div class="form-row">
-        <div class="fg"><label>Statut</label>
+        <div class="fg">
+          <label>Statut</label>
           <select id="f-status-m">
             <option value="ready">Ready to start</option>
             <option value="ongoing">Ongoing</option>
@@ -99,29 +138,51 @@
             <option value="hold">On hold</option>
           </select>
         </div>
-        <div class="fg"><label>Importance</label>
-          <select id="f-imp"><option value="medium">Medium</option><option value="high">High</option><option value="low">Low</option></select>
+        <div class="fg">
+          <label>Importance</label>
+          <select id="f-imp">
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="low">Low</option>
+          </select>
         </div>
       </div>
+
       <div class="fg">
         <label>Progression</label>
         <div class="slider-wrap">
-          <input type="range" id="f-progress" min="0" max="100" step="1" value="0">
-          <span class="slider-val" id="f-progress-val">0%</span>
+          <input type="range" id="f-progress" min="0" max="100" step="1" value="0" />
+          <span id="f-progress-val" class="slider-val">0%</span>
         </div>
-        <div class="prog-hint" id="prog-hint">Auto selon le statut — ajustable manuellement</div>
+        <div id="prog-hint" class="prog-hint">Auto selon le statut — ajustable manuellement</div>
       </div>
+
       <div class="form-row">
-        <div class="fg"><label>Date de début</label><input type="date" id="f-date"></div>
-        <div class="fg"><label>Deadline</label><input type="date" id="f-deadline"></div>
+        <div class="fg">
+          <label>Date de début</label>
+          <input type="date" id="f-date" />
+        </div>
+        <div class="fg">
+          <label>☠ Deadline</label>
+          <input type="date" id="f-deadline" />
+        </div>
       </div>
-      <div class="fg" id="note-field-wrap"><label id="note-label">Note initiale</label><textarea id="f-note" placeholder="Ajouter une note..."></textarea></div>
+
+      <div class="fg" id="note-field-wrap">
+        <label id="note-label">Note initiale</label>
+        <textarea id="f-note" placeholder="Ajouter une note…"></textarea>
+      </div>
+
       <div class="modal-footer">
-        <button class="btn-cm" id="btn-cancel">Annuler</button>
-        <button class="btn-sm-save" id="btn-save">Enregistrer</button>
+        <button id="btn-cancel" class="btn-ghost">Annuler</button>
+        <button id="btn-save" class="btn-primary">Enregistrer</button>
       </div>
     </div>
   </div>
-</div>
+
+</div><!-- #app -->
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
+</body>
+</html>
