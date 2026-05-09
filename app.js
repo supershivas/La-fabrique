@@ -287,7 +287,7 @@ function openInlineStatus(pid, anchorEl) {
     item.addEventListener('click', async e=>{
       e.stopPropagation();
       const newStatus=item.dataset.status;
-      const p=projects.find(x=>x.id===parseInt(item.dataset.pid));
+      const p=projects.find(x=>x.id===item.dataset.pid);
       if(!p)return;
       const wasNotDone=p.status!=='done';
       p.status=newStatus;
@@ -312,10 +312,10 @@ function closeInlineStatus() {
    ============================================================ */
 function setupDragDrop(container) {
   container.querySelectorAll('.proj-card[draggable]').forEach(card=>{
-    card.addEventListener('dragstart',e=>{ dragSrcId=parseInt(card.dataset.pid); card.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+    card.addEventListener('dragstart',e=>{ dragSrcId=card.dataset.pid; card.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
     card.addEventListener('dragend',  ()=>{ card.classList.remove('dragging'); container.querySelectorAll('.proj-card').forEach(c=>c.classList.remove('drag-over')); dragSrcId=null; });
-    card.addEventListener('dragover', e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; if(parseInt(card.dataset.pid)===dragSrcId)return; container.querySelectorAll('.proj-card').forEach(c=>c.classList.remove('drag-over')); card.classList.add('drag-over'); });
-    card.addEventListener('drop',     e=>{ e.preventDefault(); if(!dragSrcId)return; const tid=parseInt(card.dataset.pid); if(tid===dragSrcId)return; const list=getFiltered(); const si=list.findIndex(p=>p.id===dragSrcId),ti=list.findIndex(p=>p.id===tid); if(si===-1||ti===-1)return; const [m]=list.splice(si,1); list.splice(ti,0,m); saveOrder(list); renderProjects(); });
+    card.addEventListener('dragover', e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; if(card.dataset.pid===dragSrcId)return; container.querySelectorAll('.proj-card').forEach(c=>c.classList.remove('drag-over')); card.classList.add('drag-over'); });
+    card.addEventListener('drop',     e=>{ e.preventDefault(); if(!dragSrcId)return; const tid=card.dataset.pid; if(tid===dragSrcId)return; const list=getFiltered(); const si=list.findIndex(p=>p.id===dragSrcId),ti=list.findIndex(p=>p.id===tid); if(si===-1||ti===-1)return; const [m]=list.splice(si,1); list.splice(ti,0,m); saveOrder(list); renderProjects(); });
   });
 }
 
@@ -436,16 +436,16 @@ function attachCardListeners() {
     node.addEventListener('click', e=>{
       e.stopPropagation();
       const {action,pid,sid}=node.dataset;
-      const pId=pid?parseInt(pid):null, sId=sid?parseInt(sid):null;
+      // IDs are UUIDs (strings) — do NOT parseInt
       switch(action){
-        case 'toggle':        toggleExpand(pId);           break;
-        case 'edit-proj':     openEdit(pId);               break;
-        case 'delete-proj':   confirmDelete(pId);          break;
-        case 'archive-proj':  toggleArchive(pId);          break;
-        case 'new-sub':       openNewSub(pId);             break;
-        case 'edit-sub':      openEditSub(pId,sId);        break;
-        case 'add-note':      openAddNote(pId);            break;
-        case 'inline-status': openInlineStatus(pId,node);  break;
+        case 'toggle':        toggleExpand(pid);           break;
+        case 'edit-proj':     openEdit(pid);               break;
+        case 'delete-proj':   confirmDelete(pid);          break;
+        case 'archive-proj':  toggleArchive(pid);          break;
+        case 'new-sub':       openNewSub(pid);             break;
+        case 'edit-sub':      openEditSub(pid,sid);        break;
+        case 'add-note':      openAddNote(pid);            break;
+        case 'inline-status': openInlineStatus(pid,node);  break;
       }
     });
   });
