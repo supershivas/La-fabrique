@@ -88,6 +88,12 @@
           <option value="deadline">Deadline</option>
           <option value="progress">%</option>
         </select>
+        <button id="btn-dashboard" class="btn-add" style="background:var(--bg-hover);color:var(--text-secondary);border:1px solid var(--border-md)">
+          <i class="ti ti-chart-bar"></i>Stats
+        </button>
+        <button id="btn-export" class="btn-add" style="background:var(--bg-hover);color:var(--text-secondary);border:1px solid var(--border-md)">
+          <i class="ti ti-download"></i>CSV
+        </button>
         <button id="btn-new" class="btn-primary">
           <i class="ti ti-plus"></i>Nouveau
         </button>
@@ -195,7 +201,6 @@
 </div><!-- #app -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="env.js"></script>
-<script src="app.js"></script>
+<script src="main.js"></script>
 </body>
 </html>
