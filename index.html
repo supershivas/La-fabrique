@@ -39,13 +39,21 @@
         <div id="yl-perso" class="year-list"></div>
       </div>
 
-      <!-- DB STATUS — bottom of sidebar -->
+      <!-- DB STATUS + ACTIONS — bottom of sidebar -->
       <div id="sidebar-footer">
         <span id="db-status" class="db-status connecting">
           <i class="ti ti-database"></i>
           <span>Connexion…</span>
         </span>
         <span id="db-last-sync" class="db-last-sync"></span>
+        <div class="sidebar-footer-actions">
+          <button id="toggle-archived" class="btn-sidebar-action">
+            ↓ Voir archivés
+          </button>
+          <button id="btn-logout" class="btn-sidebar-action btn-logout" title="Se déconnecter">
+            <i class="ti ti-logout"></i>
+          </button>
+        </div>
       </div>
     </aside>
 
@@ -74,6 +82,7 @@
         </select>
         <select id="sort-by" class="filter">
           <option value="updated">↓ Update</option>
+          <option value="manual">✥ Manuel</option>
           <option value="number">Numéro</option>
           <option value="name">Nom</option>
           <option value="deadline">Deadline</option>
