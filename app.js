@@ -759,110 +759,9 @@ function openEditSub(parentId, subId) {
   openModal('Modifier le sous-projet','ti-edit');
 }
 
-/* ============================================================
-   MODAL — SAVE
-   ============================================================ */
-el('btn-save').addEventListener('click', async () => {
-  const num=val('f-num'), name=val('f-name'), status=el('f-status-m').value;
-  const progress=parseInt(el('f-progress').value)||0;
-  const deadline=el('f-deadline').value, date=el('f-date').value;
-  const noteText=val('f-note'), editor=val('f-editor'), client=val('f-client');
-  const importance=el('f-imp').value, cat=el('f-cat').value, now=todayISO();
-
-  el('btn-save').disabled=true; el('btn-save').textContent='Enregistrement…';
-
-  try {
-    if (addingNoteTo!==null) {
-      const p=projects.find(x=>x.id===addingNoteTo);
-      const wasNotDone=p.status!=='done';
-      Object.assign(p,{status,progress,importance,updatedAt:now});
-      if(status==='done'&&wasNotDone)p.ended=now;
-      if(status!=='done')p.ended=null;
-      await saveProject({...p},false);
-      if(noteText){await saveNote(p.id,noteText);p.notes.push({date:now,text:noteText});}
-      toast('Note ajoutée ✓'); closeModal(); renderProjects(); return;
-    }
-    if (editingSubParentId!==null && editingId!==null) {
-      if(!num||!name)return;
-      const parent=projects.find(x=>x.id===editingSubParentId);
-      const sub=parent.subprojects.find(x=>x.id===editingId);
-      Object.assign(sub,{number:num,name,status,progress});
-      await saveSubproject(editingSubParentId,sub,false);
-      parent.updatedAt=now; await saveProject({...parent},false);
-      toast('Sous-projet mis à jour ✓');
-    } else if (editingSubParentId!==null) {
-      if(!num||!name)return;
-      const parent=projects.find(x=>x.id===editingSubParentId);
-      const newId=await saveSubproject(editingSubParentId,{number:num,name,status,progress},true);
-      if(newId){parent.subprojects.push({id:newId,number:num,name,status,progress});parent.updatedAt=now;await saveProject({...parent},false);}
-      toast('Sous-projet créé ✓');
-    } else if (editingId!==null) {
-      if(!name)return;
-      const p=projects.find(x=>x.id===editingId);
-      const wasNotDone=p.status!=='done';
-      Object.assign(p,{name,status,progress,date,deadline,editor,client,importance,cat,updatedAt:now});
-      if(status==='done'&&wasNotDone)p.ended=now;
-      if(status!=='done')p.ended=null;
-      await saveProject({...p},false);
-      if(noteText){await saveNote(p.id,noteText);p.notes.push({date:now,text:noteText});}
-      toast('Projet mis à jour ✓');
-    } else {
-      if(!num||!name)return;
-      const year=parseInt(num.split('_')[0])||new Date().getFullYear();
-      const newP={number:num,name,cat,status,progress,importance,editor,client,date,deadline,ended:status==='done'?now:null,archived:false,updatedAt:now,year,subprojects:[],notes:[]};
-      const newId=await saveProject({...newP},true);
-      if(newId){
-        newP.id=newId;
-        if(noteText){await saveNote(newId,noteText);newP.notes.push({date:now,text:noteText});}
-        projects.push(newP); selectedYear=year; selectedCat=cat;
-        toast('Projet créé ✓');
-      }
-    }
-    closeModal(); renderSidebar(); renderProjects();
-  } finally {
-    el('btn-save').disabled=false; el('btn-save').textContent='Enregistrer';
-  }
-});
 
 /* ============================================================
-   KEYBOARD SHORTCUTS
-   ============================================================ */
-document.addEventListener('keydown', e => {
-  if (e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') return;
-  if (e.key==='n'||e.key==='N') { e.preventDefault(); openNewProject(); }
-  if (e.key==='Escape') { closeModal(); closeInlineStatus(); }
-});
-
-/* ============================================================
-   EVENT LISTENERS
-   ============================================================ */
-el('btn-new').addEventListener('click', openNewProject);
-el('btn-cancel').addEventListener('click', closeModal);
-el('modal-overlay').addEventListener('click', e=>{ if(e.target===el('modal-overlay'))closeModal(); });
-el('f-status-m').addEventListener('change', function(){ sliderManual=false; syncSliderToStatus(this.value); });
-el('f-progress').addEventListener('input', function(){
-  sliderManual=true; el('f-progress-val').textContent=`${this.value}%`;
-  el('prog-hint').textContent='Valeur personnalisée';
-});
-el('search').addEventListener('input', renderProjects);
-el('filter-status').addEventListener('change', renderProjects);
-el('filter-imp').addEventListener('change', renderProjects);
-el('sort-by').addEventListener('change', renderProjects);
-
-el('toggle-archived').addEventListener('click', ()=>{
-  showArchived=!showArchived;
-  el('toggle-archived').textContent=showArchived?'↑ Masquer archivés':'↓ Voir archivés';
-  renderProjects();
-});
-
-el('btn-logout').addEventListener('click', async ()=>{
-  await db.auth.signOut();
-  currentUser=null;
-  renderLoginScreen();
-});
-
-/* ============================================================
-   CSS INJECTED
+   CSS INJECTED (pas besoin du DOM — peut rester ici)
    ============================================================ */
 document.head.insertAdjacentHTML('beforeend', `<style>
   @keyframes spin    { to { transform:rotate(360deg); } }
@@ -887,8 +786,115 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 </style>`);
 
 /* ============================================================
-   INIT
+   INIT — tout ce qui touche le DOM attend DOMContentLoaded
    ============================================================ */
-setupAC('f-editor','editor-suggest',()=>getUniqueList('editor'));
-setupAC('f-client','client-suggest',()=>getUniqueList('client'));
-checkAuth();
+document.addEventListener('DOMContentLoaded', () => {
+
+  // Autocomplete
+  setupAC('f-editor', 'editor-suggest', () => getUniqueList('editor'));
+  setupAC('f-client', 'client-suggest', () => getUniqueList('client'));
+
+  // Modal
+  el('btn-save').addEventListener('click', async () => {
+    const num=val('f-num'), name=val('f-name'), status=el('f-status-m').value;
+    const progress=parseInt(el('f-progress').value)||0;
+    const deadline=el('f-deadline').value, date=el('f-date').value;
+    const noteText=val('f-note'), editor=val('f-editor'), client=val('f-client');
+    const importance=el('f-imp').value, cat=el('f-cat').value, now=todayISO();
+
+    el('btn-save').disabled=true; el('btn-save').textContent='Enregistrement…';
+
+    try {
+      if (addingNoteTo!==null) {
+        const p=projects.find(x=>x.id===addingNoteTo);
+        const wasNotDone=p.status!=='done';
+        Object.assign(p,{status,progress,importance,updatedAt:now});
+        if(status==='done'&&wasNotDone)p.ended=now;
+        if(status!=='done')p.ended=null;
+        await saveProject({...p},false);
+        if(noteText){await saveNote(p.id,noteText);p.notes.push({date:now,text:noteText});}
+        toast('Note ajoutée ✓'); closeModal(); renderProjects(); return;
+      }
+      if (editingSubParentId!==null && editingId!==null) {
+        if(!num||!name)return;
+        const parent=projects.find(x=>x.id===editingSubParentId);
+        const sub=parent.subprojects.find(x=>x.id===editingId);
+        Object.assign(sub,{number:num,name,status,progress});
+        await saveSubproject(editingSubParentId,sub,false);
+        parent.updatedAt=now; await saveProject({...parent},false);
+        toast('Sous-projet mis à jour ✓');
+      } else if (editingSubParentId!==null) {
+        if(!num||!name)return;
+        const parent=projects.find(x=>x.id===editingSubParentId);
+        const newId=await saveSubproject(editingSubParentId,{number:num,name,status,progress},true);
+        if(newId){parent.subprojects.push({id:newId,number:num,name,status,progress});parent.updatedAt=now;await saveProject({...parent},false);}
+        toast('Sous-projet créé ✓');
+      } else if (editingId!==null) {
+        if(!name)return;
+        const p=projects.find(x=>x.id===editingId);
+        const wasNotDone=p.status!=='done';
+        Object.assign(p,{name,status,progress,date,deadline,editor,client,importance,cat,updatedAt:now});
+        if(status==='done'&&wasNotDone)p.ended=now;
+        if(status!=='done')p.ended=null;
+        await saveProject({...p},false);
+        if(noteText){await saveNote(p.id,noteText);p.notes.push({date:now,text:noteText});}
+        toast('Projet mis à jour ✓');
+      } else {
+        if(!num||!name)return;
+        const year=parseInt(num.split('_')[0])||new Date().getFullYear();
+        const newP={number:num,name,cat,status,progress,importance,editor,client,date,deadline,
+          ended:status==='done'?now:null,archived:false,updatedAt:now,year,subprojects:[],notes:[]};
+        const newId=await saveProject({...newP},true);
+        if(newId){
+          newP.id=newId;
+          if(noteText){await saveNote(newId,noteText);newP.notes.push({date:now,text:noteText});}
+          projects.push(newP); selectedYear=year; selectedCat=cat;
+          toast('Projet créé ✓');
+        }
+      }
+      closeModal(); renderSidebar(); renderProjects();
+    } finally {
+      el('btn-save').disabled=false; el('btn-save').textContent='Enregistrer';
+    }
+  });
+
+  el('btn-new').addEventListener('click', openNewProject);
+  el('btn-cancel').addEventListener('click', closeModal);
+  el('modal-overlay').addEventListener('click', e=>{ if(e.target===el('modal-overlay'))closeModal(); });
+
+  el('f-status-m').addEventListener('change', function(){
+    sliderManual=false; syncSliderToStatus(this.value);
+  });
+  el('f-progress').addEventListener('input', function(){
+    sliderManual=true; el('f-progress-val').textContent=`${this.value}%`;
+    el('prog-hint').textContent='Valeur personnalisée';
+  });
+
+  el('search').addEventListener('input', renderProjects);
+  el('filter-status').addEventListener('change', renderProjects);
+  el('filter-imp').addEventListener('change', renderProjects);
+  el('sort-by').addEventListener('change', renderProjects);
+
+  el('toggle-archived').addEventListener('click', ()=>{
+    showArchived=!showArchived;
+    el('toggle-archived').textContent=showArchived?'↑ Masquer archivés':'↓ Voir archivés';
+    renderProjects();
+  });
+
+  el('btn-logout').addEventListener('click', async ()=>{
+    await db.auth.signOut();
+    currentUser=null;
+    renderLoginScreen();
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') return;
+    if (e.key==='n'||e.key==='N') { e.preventDefault(); openNewProject(); }
+    if (e.key==='Escape') { closeModal(); closeInlineStatus(); }
+  });
+
+  // Check auth & launch app
+  checkAuth();
+
+}); // end DOMContentLoaded
