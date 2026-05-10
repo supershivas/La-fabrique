@@ -937,45 +937,154 @@ document.head.insertAdjacentHTML('beforeend',`<style>
    ============================================================ */
 document.addEventListener('DOMContentLoaded',()=>{
 
-  g('btn-new').addEventListener('click',openNewProject);
-  g('btn-cancel').addEventListener('click',closeModal);
-  g('btn-save').addEventListener('click',handleSave);
-  g('modal-overlay').addEventListener('click',e=>{if(e.target===g('modal-overlay'))closeModal();});
+  /* ---- Modal ---- */
+  g('btn-new')?.addEventListener('click',openNewProject);
+  g('btn-cancel')?.addEventListener('click',closeModal);
+  g('btn-save')?.addEventListener('click',handleSave);
+  g('modal-overlay')?.addEventListener('click',e=>{if(e.target===g('modal-overlay'))closeModal();});
+  g('f-status-m')?.addEventListener('change',function(){sliderManual=false;syncSlider(this.value);});
+  g('f-progress')?.addEventListener('input',function(){
+    sliderManual=true;g('f-progress-val').textContent=`${this.value}%`;
+    g('prog-hint').textContent='Valeur personnalisée';
+  });
 
-  g('f-status-m').addEventListener('change',function(){sliderManual=false;syncSlider(this.value);});
-  g('f-progress').addEventListener('input',function(){sliderManual=true;g('f-progress-val').textContent=`${this.value}%`;g('prog-hint').textContent='Valeur personnalisée';});
+  /* ---- Topbar filters ---- */
+  g('search')?.addEventListener('input',renderView);
+  g('filter-status')?.addEventListener('change',renderView);
+  g('filter-imp')?.addEventListener('change',renderView);
+  g('sort-by')?.addEventListener('change',renderView);
 
-  g('search').addEventListener('input',renderView);
-  g('filter-status').addEventListener('change',renderView);
-  g('filter-imp').addEventListener('change',renderView);
-  g('sort-by').addEventListener('change',renderView);
-
-  g('toggle-archived').addEventListener('click',()=>{
+  /* ---- Sidebar actions ---- */
+  g('toggle-archived')?.addEventListener('click',()=>{
     showArchived=!showArchived;
     g('toggle-archived').textContent=showArchived?'↑ Masquer archivés':'↓ Voir archivés';
     renderView();
   });
 
-  g('btn-dashboard').addEventListener('click',()=>{
+  g('btn-dashboard')?.addEventListener('click',()=>{
     showDashboard=!showDashboard;
+    // Update sidebar tool button active state
+    g('btn-dashboard')?.classList.toggle('active', showDashboard);
     renderView();
   });
 
-  g('btn-export').addEventListener('click',exportCSV);
+  g('btn-export')?.addEventListener('click',exportCSV);
 
-  g('btn-logout').addEventListener('click',async()=>{
-    await db.auth.signOut();currentUser=null;renderLoginScreen();
+  g('btn-logout')?.addEventListener('click',async()=>{
+    await db.auth.signOut(); currentUser=null; renderLoginScreen();
   });
 
-  document.addEventListener('keydown',e=>{
-    if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
-    if(e.key==='n'||e.key==='N'){e.preventDefault();openNewProject();}
-    if(e.key==='Escape'){closeModal();closeInlineStatus();}
-    if(e.key==='d'||e.key==='D'){showDashboard=!showDashboard;renderView();}
+  /* ---- Mobile hamburger ---- */
+  function openSidebar() {
+    g('sidebar')?.classList.add('open');
+    g('sidebar-overlay')?.classList.add('open');
+  }
+  function closeSidebar() {
+    g('sidebar')?.classList.remove('open');
+    g('sidebar-overlay')?.classList.remove('open');
+  }
+
+  g('btn-menu')?.addEventListener('click', openSidebar);
+  g('sidebar-overlay')?.addEventListener('click', closeSidebar);
+
+  // Close sidebar when a year is selected on mobile
+  document.addEventListener('click', e => {
+    if (e.target.closest('.year-item') && window.innerWidth <= 640) {
+      setTimeout(closeSidebar, 120);
+    }
   });
 
+  /* ---- Mobile new project button ---- */
+  g('btn-new-mobile')?.addEventListener('click', openNewProject);
+
+  /* ---- Bottom nav ---- */
+  document.querySelectorAll('.bnav-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const view = btn.dataset.view;
+      const cat  = btn.dataset.cat;
+
+      document.querySelectorAll('.bnav-item').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      if (view === 'new') {
+        // Don't mark new as active — go back to previous
+        btn.classList.remove('active');
+        const prev = document.querySelector(`.bnav-item[data-cat="${selectedCat}"]`);
+        prev?.classList.add('active');
+        openNewProject();
+        return;
+      }
+      if (view === 'stats') {
+        showDashboard = true;
+        renderView();
+        return;
+      }
+      if (cat) {
+        showDashboard = false;
+        selectedCat  = cat;
+        // Pick most recent year for this cat
+        const years = [...new Set(projects.filter(p=>p.cat===cat).map(p=>p.year))].sort((a,b)=>b-a);
+        if (years.length) selectedYear = years[0];
+        renderSidebar();
+        renderView();
+      }
+    });
+  });
+
+  /* ---- Sidebar resize (desktop only) ---- */
+  const resizer  = g('sidebar-resizer');
+  const sidebar  = g('sidebar');
+  let isResizing = false;
+  let startX     = 0;
+  let startW     = 0;
+
+  // Restore saved width
+  const savedW = localStorage.getItem('lf_sidebar_w');
+  if (savedW && sidebar) {
+    sidebar.style.width = savedW + 'px';
+  }
+
+  resizer?.addEventListener('mousedown', e => {
+    if (window.innerWidth <= 640) return; // disable on mobile
+    isResizing = true;
+    startX = e.clientX;
+    startW = sidebar.offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!isResizing) return;
+    const dx  = e.clientX - startX;
+    const min = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-min')) || 120;
+    const max = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-max')) || 280;
+    const newW = Math.min(max, Math.max(min, startW + dx));
+    sidebar.style.width = newW + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!isResizing) return;
+    isResizing = false;
+    resizer?.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    // Persist width
+    try { localStorage.setItem('lf_sidebar_w', sidebar.offsetWidth); } catch(_) {}
+  });
+
+  /* ---- Keyboard shortcuts ---- */
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') return;
+    if (e.key==='n'||e.key==='N') { e.preventDefault(); openNewProject(); }
+    if (e.key==='Escape')         { closeModal(); closeInlineStatus(); closeSidebar(); }
+    if (e.key==='d'||e.key==='D') { showDashboard=!showDashboard; g('btn-dashboard')?.classList.toggle('active',showDashboard); renderView(); }
+  });
+
+  /* ---- Autocomplete ---- */
   setupAC('f-editor','editor-suggest',()=>getUniqueList('editor'));
   setupAC('f-client','client-suggest',()=>getUniqueList('client'));
 
+  /* ---- Go ---- */
   checkAuth();
 });
