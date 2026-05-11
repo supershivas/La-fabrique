@@ -1,23 +1,19 @@
 <!DOCTYPE html>
 <html lang="fr" data-theme="light" data-font-size="normal">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
   <title>La fabrique — Gestion de projets</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
-    <link rel="icon" type="image/x-icon" href="/images/favicon.png">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 </head>
 <body>
-
 <div id="app">
 
-  <!-- ═══ HEADER ═══ -->
+  <!-- HEADER -->
   <header id="header">
-    <button id="btn-menu" class="btn-icon-hdr" aria-label="Menu">
-      <i class="ti ti-menu-2"></i>
-    </button>
+    <button id="btn-menu" class="btn-icon-hdr"><i class="ti ti-menu-2"></i></button>
     <div class="logo">
       <div class="logo-icon">✦</div>
       <div class="logo-text">
@@ -27,25 +23,17 @@
     </div>
     <div class="header-right">
       <span id="topbar-title" class="header-view-title"></span>
-      <button id="btn-settings-hdr" class="btn-icon-hdr" title="Paramètres (P)">
-        <i class="ti ti-settings"></i>
-      </button>
-      <button id="btn-new-mobile" class="btn-new-mobile" aria-label="Nouveau projet">
-        <i class="ti ti-plus"></i>
-      </button>
+      <button id="btn-settings-hdr" class="btn-icon-hdr" title="Paramètres (P)"><i class="ti ti-settings"></i></button>
+      <button id="btn-new-mobile" class="btn-new-mobile"><i class="ti ti-plus"></i></button>
     </div>
   </header>
 
   <div id="body">
-
-    <!-- SIDEBAR OVERLAY -->
     <div id="sidebar-overlay"></div>
 
-    <!-- ═══ SIDEBAR ═══ -->
+    <!-- SIDEBAR -->
     <aside id="sidebar">
       <div class="sidebar-scroll">
-
-        <!-- Projects nav -->
         <div class="cat-section">
           <div class="cat-label">Pro</div>
           <div id="yl-pro" class="year-list"></div>
@@ -55,69 +43,40 @@
           <div class="cat-label">Perso</div>
           <div id="yl-perso" class="year-list"></div>
         </div>
-
         <div class="cat-divider"></div>
-
-        <!-- Tools -->
         <div class="cat-section">
           <div class="cat-label">Outils</div>
           <div class="sidebar-tools">
-            <button id="btn-dashboard" class="btn-tool">
-              <i class="ti ti-chart-bar"></i><span>Statistiques</span>
-            </button>
-            <button id="btn-export" class="btn-tool">
-              <i class="ti ti-download"></i><span>Export CSV</span>
-            </button>
-            <button id="toggle-archived" class="btn-tool">
-              <i class="ti ti-archive"></i><span>Voir archivés</span>
-            </button>
+            <button id="btn-dashboard" class="btn-tool"><i class="ti ti-chart-bar"></i><span>Statistiques</span></button>
+            <button id="btn-export"    class="btn-tool"><i class="ti ti-download"></i><span>Export CSV</span></button>
+            <button id="toggle-archived" class="btn-tool"><i class="ti ti-archive"></i><span>Voir archivés</span></button>
           </div>
         </div>
-
-      </div><!-- .sidebar-scroll -->
-
-      <!-- ── Sidebar footer ── -->
+      </div>
       <div id="sidebar-footer">
-        <span id="db-status" class="db-status connecting">
-          <i class="ti ti-database"></i>
-          <span>Connexion…</span>
-        </span>
+        <span id="db-status" class="db-status connecting"><i class="ti ti-database"></i><span>Connexion…</span></span>
         <span id="db-last-sync" class="db-last-sync"></span>
         <div class="sidebar-footer-actions">
-          <button id="btn-settings" class="btn-sidebar-action">
-            <i class="ti ti-settings" style="font-size:0.8rem"></i> Paramètres
-          </button>
-          <button id="btn-logout" class="btn-sidebar-action btn-logout" title="Se déconnecter">
-            <i class="ti ti-logout"></i>
-          </button>
+          <button id="btn-settings" class="btn-sidebar-action"><i class="ti ti-settings" style="font-size:.8rem"></i> Paramètres</button>
+          <button id="btn-logout"   class="btn-sidebar-action btn-logout"><i class="ti ti-logout"></i></button>
         </div>
       </div>
-
-      <!-- Resize handle -->
       <div id="sidebar-resizer"></div>
     </aside>
 
-    <!-- ═══ MAIN ═══ -->
+    <!-- MAIN -->
     <main id="main">
       <div id="topbar">
-        <div id="search-wrap">
-          <i class="ti ti-search"></i>
-          <input type="text" id="search" placeholder="Rechercher…" />
-        </div>
+        <div id="search-wrap"><i class="ti ti-search"></i><input type="text" id="search" placeholder="Rechercher…"/></div>
         <select id="filter-status" class="filter">
           <option value="">Statut</option>
-          <option value="ready">Ready</option>
-          <option value="ongoing">Ongoing</option>
-          <option value="review">In review</option>
-          <option value="sent">Sent</option>
-          <option value="done">Done</option>
-          <option value="hold">On hold</option>
+          <option value="ready">Ready</option><option value="ongoing">Ongoing</option>
+          <option value="review">In review</option><option value="sent">Sent</option>
+          <option value="done">Done</option><option value="hold">On hold</option>
         </select>
         <select id="filter-imp" class="filter">
           <option value="">Imp.</option>
-          <option value="high">High</option>
-          <option value="medium">Med</option>
-          <option value="low">Low</option>
+          <option value="high">High</option><option value="medium">Med</option><option value="low">Low</option>
         </select>
         <select id="sort-by" class="filter">
           <option value="manual">✥ Manuel</option>
@@ -127,89 +86,66 @@
           <option value="deadline">Deadline</option>
           <option value="progress">%</option>
         </select>
-        <button id="btn-new" class="btn-primary">
-          <i class="ti ti-plus"></i><span class="btn-label">Nouveau</span>
-        </button>
+        <button id="btn-new" class="btn-primary"><i class="ti ti-plus"></i><span class="btn-label">Nouveau</span></button>
       </div>
-
       <div id="project-list"></div>
     </main>
   </div>
 
-  <!-- ═══ BOTTOM NAV (mobile) ═══ -->
+  <!-- BOTTOM NAV -->
   <nav id="bottom-nav">
-    <button class="bnav-item active" data-cat="pro" data-view="list">
-      <i class="ti ti-briefcase"></i><span>Pro</span>
-    </button>
-    <button class="bnav-item" data-cat="perso" data-view="list">
-      <i class="ti ti-home"></i><span>Perso</span>
-    </button>
-    <button class="bnav-item" data-view="stats">
-      <i class="ti ti-chart-bar"></i><span>Stats</span>
-    </button>
-    <button class="bnav-item" data-view="settings">
-      <i class="ti ti-settings"></i><span>Config</span>
-    </button>
-    <button class="bnav-item" data-view="new">
-      <i class="ti ti-plus"></i><span>Nouveau</span>
-    </button>
+    <button class="bnav-item active" data-cat="pro"   data-view="list"><i class="ti ti-briefcase"></i><span>Pro</span></button>
+    <button class="bnav-item"        data-cat="perso"  data-view="list"><i class="ti ti-home"></i><span>Perso</span></button>
+    <button class="bnav-item"        data-view="stats"><i class="ti ti-chart-bar"></i><span>Stats</span></button>
+    <button class="bnav-item"        data-view="settings"><i class="ti ti-settings"></i><span>Config</span></button>
+    <button class="bnav-item"        data-view="new"><i class="ti ti-plus"></i><span>Nouveau</span></button>
   </nav>
 
-  <!-- ═══ MODAL PROJET ═══ -->
+  <!-- MODAL PROJET -->
   <div id="modal-overlay">
-    <div id="modal">
+    <div id="modal" class="resizable-modal">
+      <div class="modal-resize-handle" id="modal-resize-handle"></div>
       <h2 id="modal-title"><i class="ti ti-folder"></i>Nouveau projet</h2>
       <div class="form-row">
-        <div class="fg"><label>Numéro</label><input type="text" id="f-num" placeholder="2026_0001" /></div>
+        <div class="fg"><label>Numéro</label><input type="text" id="f-num" placeholder="2026_0001"/></div>
         <div class="fg"><label>Catégorie</label>
           <select id="f-cat"><option value="pro">Pro</option><option value="perso">Perso</option></select>
         </div>
       </div>
-      <div class="fg"><label>Nom du projet</label><input type="text" id="f-name" placeholder="Nom du projet" /></div>
+      <div class="fg"><label>Nom du projet</label><input type="text" id="f-name" placeholder="Nom du projet"/></div>
       <div class="form-row">
         <div class="fg"><label>Éditeur</label>
-          <div class="ac-wrap">
-            <input type="text" id="f-editor" placeholder="Éditeur…" autocomplete="off" />
-            <div id="editor-suggest" class="ac-suggest"></div>
-          </div>
+          <div class="ac-wrap"><input type="text" id="f-editor" placeholder="Éditeur…" autocomplete="off"/>
+          <div id="editor-suggest" class="ac-suggest"></div></div>
         </div>
-        <div class="fg"><label>Client</label>
-          <div class="ac-wrap">
-            <input type="text" id="f-client" placeholder="Client…" autocomplete="off" />
-            <div id="client-suggest" class="ac-suggest"></div>
-          </div>
+        <div class="fg"><label>Client(s) <span class="fg-hint">virgule = plusieurs</span></label>
+          <div class="ac-wrap"><input type="text" id="f-client" placeholder="Client A, Client B…" autocomplete="off"/>
+          <div id="client-suggest" class="ac-suggest"></div></div>
         </div>
       </div>
       <div class="form-row">
         <div class="fg"><label>Statut</label>
           <select id="f-status-m">
-            <option value="ready">Ready to start</option>
-            <option value="ongoing">Ongoing</option>
-            <option value="review">In review</option>
-            <option value="sent">Sent to client</option>
-            <option value="done">Done</option>
-            <option value="hold">On hold</option>
+            <option value="ready">Ready to start</option><option value="ongoing">Ongoing</option>
+            <option value="review">In review</option><option value="sent">Sent to client</option>
+            <option value="done">Done</option><option value="hold">On hold</option>
           </select>
         </div>
         <div class="fg"><label>Importance</label>
-          <select id="f-imp">
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="low">Low</option>
-          </select>
+          <select id="f-imp"><option value="medium">Medium</option><option value="high">High</option><option value="low">Low</option></select>
         </div>
       </div>
       <div class="fg">
         <label>Progression</label>
         <div class="slider-wrap">
-          <input type="range" id="f-progress" min="0" max="100" step="1" value="0" />
+          <input type="range" id="f-progress" min="0" max="100" step="1" value="0"/>
           <span id="f-progress-val" class="slider-val">0%</span>
         </div>
         <div id="prog-hint" class="prog-hint">Auto selon le statut — ajustable manuellement</div>
       </div>
       <div class="form-row">
-        <div class="fg"><label>Date de début</label><input type="date" id="f-date" /></div>
-        <div class="fg"><label>☠ Deadline</label><input type="date" id="f-deadline" /></div>
+        <div class="fg"><label>Date de début</label><input type="text" id="f-date" placeholder="JJ/MM/AAAA" maxlength="10"/></div>
+        <div class="fg"><label>☠ Deadline</label><input type="text" id="f-deadline" placeholder="JJ/MM/AAAA" maxlength="10"/></div>
       </div>
       <div class="fg" id="note-field-wrap">
         <label id="note-label">Note initiale</label>
@@ -217,143 +153,81 @@
       </div>
       <div class="modal-footer">
         <button id="btn-cancel" class="btn-ghost">Annuler</button>
-        <button id="btn-save" class="btn-primary">Enregistrer</button>
+        <button id="btn-save"   class="btn-primary">Enregistrer</button>
       </div>
     </div>
   </div>
 
-  <!-- ═══ MODAL PARAMÈTRES ═══ -->
+  <!-- MODAL PARAMÈTRES -->
   <div id="settings-overlay">
     <div id="settings-modal">
       <div class="settings-header">
         <h2><i class="ti ti-settings"></i> Paramètres</h2>
         <button id="btn-settings-close" class="btn-icon"><i class="ti ti-x"></i></button>
       </div>
-
-      <!-- Apparence -->
       <div class="settings-section">
         <div class="settings-section-title">Apparence</div>
-
         <div class="settings-row">
-          <div class="settings-row-label">
-            <i class="ti ti-moon"></i>
-            <div>
-              <div class="settings-row-name">Mode sombre</div>
-              <div class="settings-row-desc">Bascule entre le thème clair et sombre</div>
-            </div>
-          </div>
-          <button id="toggle-theme" class="toggle-btn" role="switch" aria-checked="false">
-            <span class="toggle-knob"></span>
-          </button>
+          <div class="settings-row-label"><i class="ti ti-moon"></i><div><div class="settings-row-name">Mode sombre</div><div class="settings-row-desc">Thème clair / sombre</div></div></div>
+          <button id="toggle-theme" class="toggle-btn" role="switch" aria-checked="false"><span class="toggle-knob"></span></button>
         </div>
-
         <div class="settings-row">
-          <div class="settings-row-label">
-            <i class="ti ti-typography"></i>
-            <div>
-              <div class="settings-row-name">Taille des textes</div>
-              <div class="settings-row-desc">Ajuste la densité de l'interface</div>
-            </div>
-          </div>
+          <div class="settings-row-label"><i class="ti ti-typography"></i><div><div class="settings-row-name">Taille des textes</div><div class="settings-row-desc">Densité de l'interface</div></div></div>
           <div class="font-size-picker">
-            <button class="fs-btn" data-size="compact" title="Compact">A<span style="font-size:.6em">A</span></button>
-            <button class="fs-btn active" data-size="normal" title="Normal">A</button>
-            <button class="fs-btn" data-size="large" title="Large"><span style="font-size:1.2em">A</span></button>
+            <button class="fs-btn" data-size="compact">A<span style="font-size:.6em">A</span></button>
+            <button class="fs-btn active" data-size="normal">A</button>
+            <button class="fs-btn" data-size="large"><span style="font-size:1.2em">A</span></button>
           </div>
         </div>
-
         <div class="settings-row">
-          <div class="settings-row-label">
-            <i class="ti ti-palette"></i>
-            <div>
-              <div class="settings-row-name">Couleur d'accent</div>
-              <div class="settings-row-desc">Couleur principale de l'interface</div>
-            </div>
-          </div>
+          <div class="settings-row-label"><i class="ti ti-palette"></i><div><div class="settings-row-name">Couleur d'accent</div><div class="settings-row-desc">Couleur principale</div></div></div>
           <div class="accent-picker">
-            <button class="accent-swatch active" data-accent="gold"   style="background:#C9973A" title="Or"></button>
-            <button class="accent-swatch"        data-accent="blue"   style="background:#2563EB" title="Bleu"></button>
-            <button class="accent-swatch"        data-accent="green"  style="background:#16A34A" title="Vert"></button>
-            <button class="accent-swatch"        data-accent="purple" style="background:#7C3AED" title="Violet"></button>
-            <button class="accent-swatch"        data-accent="rose"   style="background:#E11D48" title="Rouge"></button>
+            <button class="accent-swatch active" data-accent="gold"   style="background:#C9973A"></button>
+            <button class="accent-swatch"        data-accent="blue"   style="background:#2563EB"></button>
+            <button class="accent-swatch"        data-accent="green"  style="background:#16A34A"></button>
+            <button class="accent-swatch"        data-accent="purple" style="background:#7C3AED"></button>
+            <button class="accent-swatch"        data-accent="rose"   style="background:#E11D48"></button>
           </div>
         </div>
       </div>
-
-      <!-- Compte -->
       <div class="settings-section">
         <div class="settings-section-title">Compte</div>
         <div class="settings-row">
-          <div class="settings-row-label">
-            <i class="ti ti-user-circle"></i>
-            <div>
-              <div class="settings-row-name">Connecté en tant que</div>
-              <div class="settings-row-desc" id="settings-email">—</div>
-            </div>
-          </div>
-          <button id="btn-logout-settings" class="btn-ghost" style="height:28px;font-size:0.75rem">
-            <i class="ti ti-logout" style="font-size:0.8rem"></i> Déconnecter
-          </button>
+          <div class="settings-row-label"><i class="ti ti-user-circle"></i><div><div class="settings-row-name">Connecté en tant que</div><div class="settings-row-desc" id="settings-email">—</div></div></div>
+          <button id="btn-logout-settings" class="btn-ghost" style="height:28px;font-size:.75rem"><i class="ti ti-logout"></i> Déconnecter</button>
         </div>
       </div>
-
-      <!-- Base de données -->
       <div class="settings-section">
         <div class="settings-section-title">Base de données</div>
         <div class="settings-row">
-          <div class="settings-row-label">
-            <i class="ti ti-database"></i>
-            <div>
-              <div class="settings-row-name">Statut Supabase</div>
-              <div class="settings-row-desc" id="settings-db-url">—</div>
-            </div>
-          </div>
-          <span id="settings-db-badge" class="db-status connecting" style="width:auto;padding:4px 8px">
-            <i class="ti ti-loader-2"></i><span>…</span>
-          </span>
+          <div class="settings-row-label"><i class="ti ti-database"></i><div><div class="settings-row-name">Statut Supabase</div><div class="settings-row-desc" id="settings-db-url">—</div></div></div>
+          <span id="settings-db-badge" class="db-status connecting" style="width:auto;padding:4px 8px"><i class="ti ti-loader-2"></i><span>…</span></span>
         </div>
         <div class="settings-row">
-          <div class="settings-row-label">
-            <i class="ti ti-refresh"></i>
-            <div>
-              <div class="settings-row-name">Dernière synchronisation</div>
-              <div class="settings-row-desc" id="settings-last-sync">—</div>
-            </div>
-          </div>
-          <button id="btn-reconnect" class="btn-ghost" style="height:28px;font-size:0.75rem">
-            Reconnecter
-          </button>
+          <div class="settings-row-label"><i class="ti ti-refresh"></i><div><div class="settings-row-name">Dernière sync</div><div class="settings-row-desc" id="settings-last-sync">—</div></div></div>
+          <button id="btn-reconnect" class="btn-ghost" style="height:28px;font-size:.75rem">Reconnecter</button>
         </div>
       </div>
-
-      <!-- Raccourcis -->
       <div class="settings-section">
         <div class="settings-section-title">Raccourcis clavier</div>
         <div class="shortcuts-grid">
           <div class="shortcut-row"><kbd>N</kbd><span>Nouveau projet</span></div>
-          <div class="shortcut-row"><kbd>D</kbd><span>Afficher les stats</span></div>
+          <div class="shortcut-row"><kbd>D</kbd><span>Statistiques</span></div>
           <div class="shortcut-row"><kbd>P</kbd><span>Paramètres</span></div>
-          <div class="shortcut-row"><kbd>Esc</kbd><span>Fermer / Annuler</span></div>
+          <div class="shortcut-row"><kbd>Esc</kbd><span>Fermer</span></div>
         </div>
       </div>
-
-      <!-- Infos app -->
       <div class="settings-section">
         <div class="settings-section-title">À propos</div>
         <div class="settings-about">
-          <span class="logo-icon" style="width:24px;height:24px;font-size:0.85rem">✦</span>
-          <div>
-            <div style="font-weight:600;font-size:0.85rem">La fabrique</div>
-            <div style="font-size:0.71rem;color:var(--text-tertiary)">v6.0 — Gestion de projets pour studios créatifs</div>
-          </div>
+          <span class="logo-icon" style="width:24px;height:24px;font-size:.85rem">✦</span>
+          <div><div style="font-weight:600;font-size:.85rem">La fabrique</div><div style="font-size:.7rem;color:var(--text-tertiary)">v7.0 — Studio créatif</div></div>
         </div>
       </div>
-
     </div>
   </div>
 
-</div><!-- #app -->
-
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="env.js"></script>
 <script src="app.js"></script>
