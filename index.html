@@ -11,7 +11,6 @@
 <body>
 <div id="app">
 
-  <!-- HEADER -->
   <header id="header">
     <button id="btn-menu" class="btn-icon-hdr"><i class="ti ti-menu-2"></i></button>
     <div class="logo">
@@ -31,7 +30,6 @@
   <div id="body">
     <div id="sidebar-overlay"></div>
 
-    <!-- SIDEBAR -->
     <aside id="sidebar">
       <div class="sidebar-scroll">
         <div class="cat-section">
@@ -47,9 +45,9 @@
         <div class="cat-section">
           <div class="cat-label">Outils</div>
           <div class="sidebar-tools">
-            <button id="btn-dashboard" class="btn-tool"><i class="ti ti-chart-bar"></i><span>Statistiques</span></button>
-            <button id="btn-export"    class="btn-tool"><i class="ti ti-download"></i><span>Export CSV</span></button>
-            <button id="toggle-archived" class="btn-tool"><i class="ti ti-archive"></i><span>Voir archivés</span></button>
+            <button id="btn-dashboard"    class="btn-tool"><i class="ti ti-chart-bar"></i><span>Statistiques</span></button>
+            <button id="btn-export"       class="btn-tool"><i class="ti ti-download"></i><span>Export CSV</span></button>
+            <button id="toggle-archived"  class="btn-tool"><i class="ti ti-archive"></i><span>Voir archivés</span></button>
           </div>
         </div>
       </div>
@@ -64,7 +62,6 @@
       <div id="sidebar-resizer"></div>
     </aside>
 
-    <!-- MAIN -->
     <main id="main">
       <div id="topbar">
         <div id="search-wrap"><i class="ti ti-search"></i><input type="text" id="search" placeholder="Rechercher…"/></div>
@@ -92,19 +89,18 @@
     </main>
   </div>
 
-  <!-- BOTTOM NAV -->
   <nav id="bottom-nav">
-    <button class="bnav-item active" data-cat="pro"   data-view="list"><i class="ti ti-briefcase"></i><span>Pro</span></button>
+    <button class="bnav-item active" data-cat="pro"    data-view="list"><i class="ti ti-briefcase"></i><span>Pro</span></button>
     <button class="bnav-item"        data-cat="perso"  data-view="list"><i class="ti ti-home"></i><span>Perso</span></button>
     <button class="bnav-item"        data-view="stats"><i class="ti ti-chart-bar"></i><span>Stats</span></button>
     <button class="bnav-item"        data-view="settings"><i class="ti ti-settings"></i><span>Config</span></button>
     <button class="bnav-item"        data-view="new"><i class="ti ti-plus"></i><span>Nouveau</span></button>
   </nav>
 
-  <!-- MODAL PROJET -->
+  <!-- MODAL PROJET / SOUS-PROJET -->
   <div id="modal-overlay">
     <div id="modal" class="resizable-modal">
-      <div class="modal-resize-handle" id="modal-resize-handle"></div>
+      <div class="modal-resize-handle"></div>
       <h2 id="modal-title"><i class="ti ti-folder"></i>Nouveau projet</h2>
       <div class="form-row">
         <div class="fg"><label>Numéro</label><input type="text" id="f-num" placeholder="2026_0001"/></div>
@@ -221,7 +217,7 @@
         <div class="settings-section-title">À propos</div>
         <div class="settings-about">
           <span class="logo-icon" style="width:24px;height:24px;font-size:.85rem">✦</span>
-          <div><div style="font-weight:600;font-size:.85rem">La fabrique</div><div style="font-size:.7rem;color:var(--text-tertiary)">v7.0 — Studio créatif</div></div>
+          <div><div style="font-weight:600;font-size:.85rem">La fabrique</div><div style="font-size:.7rem;color:var(--text-tertiary)">v8.0 — Studio créatif</div></div>
         </div>
       </div>
     </div>
