@@ -1,5 +1,5 @@
 /* ============================================================
-   LA FABRIQUE — app.js  v7
+   LA FABRIQUE — app.js  v8
    ============================================================ */
 const SUPABASE_URL      = (window.__env&&window.__env.SUPABASE_URL)      || 'https://mrivfwlxnmtgkifjucvd.supabase.co';
 const SUPABASE_ANON_KEY = (window.__env&&window.__env.SUPABASE_ANON_KEY) || 'REMPLACE_PAR_TA_CLE_ANON';
@@ -16,16 +16,15 @@ const IMP_LBL       = {low:'Low',medium:'Medium',high:'High'};
 
 /* ── State ── */
 let projects=[],selectedYear=new Date().getFullYear(),selectedCat='pro';
-let showArchived=false,showDashboard=false,expandedIds=new Set();
-let sliderManual=false,currentUser=null,manualOrder={},dragSrcId=null;
+let showArchived=false,showDashboard=false,expandedIds=new Set(),expandedSubIds=new Set();
+let sliderManual=false,currentUser=null,manualOrder={},dragSrcId=null,subDragSrc=null;
 let editingId=null,editingSubParentId=null,addingNoteTo=null,addingNoteToSub=null;
-let subDragSrc=null;
+let notesExpandedIds=new Set(); // tracks which project note sections are fully expanded
 
 /* ── Date helpers ── */
 function toEU(iso){if(!iso)return'—';const[y,m,d]=iso.split('-');return`${d}/${m}/${y}`;}
 function fromEU(eu){
   if(!eu||eu==='—')return'';
-  // already ISO
   if(/^\d{4}-\d{2}-\d{2}$/.test(eu))return eu;
   const m=eu.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if(!m)return'';
@@ -41,7 +40,6 @@ function maskDate(input){
   });
 }
 function todayISO(){return new Date().toISOString().split('T')[0];}
-function todayEU(){return toEU(todayISO());}
 function dlStatus(dl){
   if(!dl)return'';
   const diff=Math.ceil((new Date(dl)-new Date())/86400000);
@@ -50,64 +48,34 @@ function dlStatus(dl){
 
 /* ── DOM helpers ── */
 function g(id){return document.getElementById(id);}
-function gv(id){return g(id).value.trim();}
-function sv(id,v){g(id).value=v??'';}
+function gv(id){return g(id)?.value.trim()||'';}
+function sv(id,v){if(g(id))g(id).value=v??'';}
 
-/* ── Progress bar HTML ── */
+/* ── Progress bar ── */
 function pb(pct,status,h='5px'){
-  const c=PROG_COLOR[status]||'#888';
+  const c=status==='done'||pct>=100?'#639922':PROG_COLOR[status]||'#888';
   return`<div class="prog-wrap"><div class="prog-bar" style="height:${h}"><div class="prog-fill" style="width:${pct}%;background:${c}"></div></div><span class="prog-pct">${pct}%</span></div>`;
-}
-
-/* ── Slider color ── */
-function sliderColor(pct){
-  if(pct>=100||g('f-status-m')?.value==='done')return'#639922';
-  return'var(--accent)';
-}
-function updateSliderUI(){
-  const pct=parseInt(g('f-progress')?.value)||0;
-  const val=g('f-progress-val');
-  if(val)val.textContent=pct+'%';
-  const slider=g('f-progress');
-  if(slider)slider.style.accentColor=pct>=100?'#639922':'var(--accent)';
-  // Auto-switch status to done at 100%
-  const statusEl=g('f-status-m');
-  if(sliderManual&&pct===100&&statusEl&&statusEl.value!=='done'){
-    statusEl.value='done';
-    g('prog-hint').textContent='Statut passé à "Done" automatiquement';
-  }
 }
 
 /* ── Order ── */
 function orderKey(){return`${selectedCat}_${selectedYear}`;}
 function getOrderedList(list){
-  const order=manualOrder[orderKey()];
-  if(!order)return list;
+  const order=manualOrder[orderKey()];if(!order)return list;
   return[...order.map(id=>list.find(p=>p.id===id)).filter(Boolean),...list.filter(p=>!order.includes(p.id))];
 }
-function saveOrder(list){
-  manualOrder[orderKey()]=list.map(p=>p.id);
-  try{localStorage.setItem('lf_order',JSON.stringify(manualOrder));}catch(_){}
-}
+function saveOrder(list){manualOrder[orderKey()]=list.map(p=>p.id);try{localStorage.setItem('lf_order',JSON.stringify(manualOrder));}catch(_){}}
 function loadOrder(){try{const r=localStorage.getItem('lf_order');if(r)manualOrder=JSON.parse(r);}catch(_){}}
 
 /* ── Prefs ── */
-const PREFS_KEY='lf_prefs';
-function loadPrefs(){try{const r=localStorage.getItem(PREFS_KEY);return r?JSON.parse(r):{}}catch(_){return{};}}
-function savePrefs(patch){const p={...loadPrefs(),...patch};try{localStorage.setItem(PREFS_KEY,JSON.stringify(p));}catch(_){}return p;}
+const PK='lf_prefs';
+function loadPrefs(){try{const r=localStorage.getItem(PK);return r?JSON.parse(r):{}}catch(_){return{};}}
+function savePrefs(patch){const p={...loadPrefs(),...patch};try{localStorage.setItem(PK,JSON.stringify(p));}catch(_){}return p;}
 function applyPrefs(){
   const p=loadPrefs(),html=document.documentElement;
-  const theme=p.theme||'light';
-  html.setAttribute('data-theme',theme);
-  g('toggle-theme')?.setAttribute('aria-checked',theme==='dark'?'true':'false');
-  const fs=p.fontSize||'normal';
-  html.setAttribute('data-font-size',fs);
-  document.querySelectorAll('.fs-btn').forEach(b=>b.classList.toggle('active',b.dataset.size===fs));
-  const accent=p.accent||'gold';
-  html.setAttribute('data-accent',accent);
-  document.querySelectorAll('.accent-swatch').forEach(b=>b.classList.toggle('active',b.dataset.accent===accent));
-  const sidebar=g('sidebar');
-  if(p.sidebarW&&sidebar)sidebar.style.width=p.sidebarW+'px';
+  const theme=p.theme||'light';html.setAttribute('data-theme',theme);g('toggle-theme')?.setAttribute('aria-checked',theme==='dark'?'true':'false');
+  const fs=p.fontSize||'normal';html.setAttribute('data-font-size',fs);document.querySelectorAll('.fs-btn').forEach(b=>b.classList.toggle('active',b.dataset.size===fs));
+  const accent=p.accent||'gold';html.setAttribute('data-accent',accent);document.querySelectorAll('.accent-swatch').forEach(b=>b.classList.toggle('active',b.dataset.accent===accent));
+  const sidebar=g('sidebar');if(p.sidebarW&&sidebar)sidebar.style.width=p.sidebarW+'px';
 }
 
 /* ── DB Status ── */
@@ -126,8 +94,7 @@ function setDbStatus(state,text){
     if(sync)sync.textContent=`Sync ${hhmm}`;
     const ss=g('settings-last-sync');if(ss)ss.textContent=`${toEU(todayISO())} à ${hhmm}`;
   } else if(sync)sync.textContent='';
-  const dbUrl=g('settings-db-url');
-  if(dbUrl)dbUrl.textContent=SUPABASE_URL.replace('https://','');
+  const dbUrl=g('settings-db-url');if(dbUrl)dbUrl.textContent=SUPABASE_URL.replace('https://','');
 }
 
 /* ── Toast ── */
@@ -139,25 +106,21 @@ function toast(msg,type='success'){
   const ic=type==='success'?'ti-circle-check':type==='error'?'ti-circle-x':'ti-info-circle';
   const t=document.createElement('div');
   t.style.cssText=`display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:8px;background:${bg};color:${fg};font-size:.8rem;font-weight:500;box-shadow:var(--shadow-md);animation:slideIn .2s ease;pointer-events:all;`;
-  t.innerHTML=`<i class="ti ${ic}" style="font-size:1rem"></i>${msg}`;
-  c.appendChild(t);
+  t.innerHTML=`<i class="ti ${ic}" style="font-size:1rem"></i>${msg}`;c.appendChild(t);
   setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300);},2800);
 }
 
-/* ── Unique lists ── */
+/* ── Unique lists (client aware of comma) ── */
 function getUniqueList(field){
   if(field==='client'){
-    const all=[];
-    projects.forEach(p=>{p.client&&p.client.split(',').map(s=>s.trim()).filter(Boolean).forEach(c=>{if(!all.includes(c))all.push(c);});});
-    return all;
+    const all=[];projects.forEach(p=>{p.client&&p.client.split(',').map(s=>s.trim()).filter(Boolean).forEach(c=>{if(!all.includes(c))all.push(c);});});return all;
   }
   return[...new Set(projects.map(p=>p[field]).filter(Boolean))];
 }
 
 /* ── Autocomplete ── */
 function setupAC(inputId,suggestId,getItems,opts={}){
-  const input=g(inputId),sug=g(suggestId);
-  if(!input||!sug)return;
+  const input=g(inputId),sug=g(suggestId);if(!input||!sug)return;
   function show(q){
     const all=getItems();
     const matches=q===null?all:all.filter(e=>e.toLowerCase().includes(q.toLowerCase())&&q.length>0);
@@ -166,32 +129,636 @@ function setupAC(inputId,suggestId,getItems,opts={}){
       sug.innerHTML=matches.map(e=>`<div class="ac-item" data-val="${e.replace(/"/g,'&quot;')}">${e}</div>`).join('');
       sug.querySelectorAll('.ac-item').forEach(item=>item.addEventListener('mousedown',e=>{
         e.preventDefault();
-        if(opts.append&&input.value.includes(',')){
-          const parts=input.value.split(',');parts[parts.length-1]=' '+item.dataset.val;
-          input.value=parts.join(',').replace(/^ /,'');
-        }else{input.value=item.dataset.val;}
+        if(opts.append&&input.value.includes(',')){const parts=input.value.split(',');parts[parts.length-1]=' '+item.dataset.val;input.value=parts.join(',').replace(/^ /,'');}
+        else input.value=item.dataset.val;
         sug.style.display='none';
       }));
     }else sug.style.display='none';
   }
   input.addEventListener('input',()=>show(input.value.split(',').pop().trim()));
-  input.addEventListener('focus',()=>show(null)); // show all on focus
+  input.addEventListener('focus',()=>show(null));
   input.addEventListener('blur',()=>setTimeout(()=>sug.style.display='none',150));
 }
 
 /* ── Export CSV ── */
 function exportCSV(){
   const list=getFiltered();
-  const headers=['Numéro','Nom','Catégorie','Statut','Progression','Importance','Éditeur','Client(s)','Date début','Deadline','Terminé le','Mis à jour'];
+  const headers=['Numéro','Nom','Catégorie','Statut','%','Importance','Éditeur','Client(s)','Début','Deadline','Terminé','Mis à jour'];
   const rows=list.map(p=>[p.number,p.name,p.cat,STATUS_LABELS[p.status]||p.status,p.progress+'%',IMP_LBL[p.importance]||p.importance,p.editor||'',p.client||'',toEU(p.date),toEU(p.deadline),toEU(p.ended),toEU(p.updatedAt)]);
   const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download=`lafabrique_${selectedCat}_${selectedYear}_${todayISO()}.csv`;a.click();URL.revokeObjectURL(url);
-  toast('Export CSV téléchargé ✓');
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`lafabrique_${selectedCat}_${selectedYear}_${todayISO()}.csv`;a.click();URL.revokeObjectURL(url);
+  toast('Export CSV ✓');
 }
 
-/* ── Dashboard ── */
+/* ══════════════════════════════════════════════════════════
+   CONTEXT MENU (… button)
+   ══════════════════════════════════════════════════════════ */
+function openCtxMenu(anchorEl, items){
+  closeCtxMenu();
+  const menu=document.createElement('div');menu.id='ctx-menu';menu.className='ctx-menu';
+  menu.innerHTML=items.map(item=>
+    item.sep?`<div class="ctx-sep"></div>`
+    :`<button class="ctx-item ${item.danger?'danger':''}" data-action="${item.action}" data-pid="${item.pid||''}" data-sid="${item.sid||''}">
+        <i class="ti ${item.icon}"></i>${item.label}
+      </button>`
+  ).join('');
+  document.body.appendChild(menu);
+  const rect=anchorEl.getBoundingClientRect();
+  let top=rect.bottom+4,left=rect.right-menu.offsetWidth||rect.left;
+  // keep in viewport
+  if(left+200>window.innerWidth)left=window.innerWidth-204;
+  if(top+menu.offsetHeight+10>window.innerHeight)top=rect.top-menu.offsetHeight-4;
+  menu.style.top=top+'px';menu.style.left=left+'px';
+
+  menu.querySelectorAll('.ctx-item').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      closeCtxMenu();
+      handleCtxAction(btn.dataset.action,btn.dataset.pid,btn.dataset.sid);
+    });
+  });
+  setTimeout(()=>document.addEventListener('click',closeCtxMenu,{once:true}),10);
+}
+function closeCtxMenu(){const m=g('ctx-menu');if(m)m.remove();}
+
+async function handleCtxAction(action,pid,sid){
+  switch(action){
+    case 'add-sub':      openNewSub(pid);break;
+    case 'add-note':     openAddNote(pid);break;
+    case 'dup-proj':     await dupProject(pid);break;
+    case 'archive-proj': await toggleArchive(pid);break;
+    case 'delete-proj':  await confirmDelete(pid);break;
+    case 'add-sub-note': openAddSubNote(pid,sid);break;
+    case 'dup-sub':      await dupSub(pid,sid);break;
+    case 'archive-sub':  toast('Archivage sous-projet non disponible','info');break;
+    case 'delete-sub':   await confirmDeleteSub(pid,sid);break;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   INLINE STATUS DROPDOWN
+   ══════════════════════════════════════════════════════════ */
+function openInlineStatus(pid,anchorEl,sid=null){
+  closeInlineStatus();
+  const item=sid?projects.find(x=>x.id===pid)?.subprojects.find(x=>x.id===sid):projects.find(x=>x.id===pid);
+  if(!item)return;
+  const dropdown=document.createElement('div');dropdown.id='inline-status-dropdown';dropdown.className='isd-dropdown';
+  dropdown.innerHTML=Object.entries(STATUS_LABELS).map(([k,v])=>`
+    <button class="isd-item ${item.status===k?'active':''}" data-status="${k}">
+      <span class="status-badge ${STATUS_CLASS[k]}">${v}</span>
+      ${item.status===k?'<i class="ti ti-check" style="font-size:.7rem;margin-left:auto;color:var(--text-tertiary)"></i>':''}
+    </button>`).join('');
+  document.body.appendChild(dropdown);
+  const rect=anchorEl.getBoundingClientRect();
+  dropdown.style.top=`${rect.bottom+4}px`;dropdown.style.left=`${Math.min(rect.left,window.innerWidth-180)}px`;
+  dropdown.querySelectorAll('.isd-item').forEach(btn=>{
+    btn.addEventListener('click',async e=>{
+      e.stopPropagation();
+      const newStatus=btn.dataset.status;
+      closeInlineStatus();
+      if(sid){
+        const parent=projects.find(x=>x.id===pid);const s=parent.subprojects.find(x=>x.id===sid);
+        if(!s)return;s.status=newStatus;s.progress=AUTO_PROG[newStatus]!==null?AUTO_PROG[newStatus]:s.progress;
+        await saveSubproject(pid,s,false);parent.updatedAt=todayISO();await saveProject({...parent},false);
+      } else {
+        const p=projects.find(x=>x.id===pid);if(!p)return;
+        const wasNotDone=p.status!=='done';p.status=newStatus;
+        p.progress=AUTO_PROG[newStatus]!==null?AUTO_PROG[newStatus]:p.progress;
+        if(newStatus==='done'&&wasNotDone)p.ended=todayISO();if(newStatus!=='done')p.ended=null;
+        p.updatedAt=todayISO();await saveProject({...p},false);
+      }
+      toast(`Statut → ${STATUS_LABELS[newStatus]} ✓`);renderProjects();renderSidebar();
+    });
+  });
+  setTimeout(()=>document.addEventListener('click',closeInlineStatus,{once:true}),10);
+}
+function closeInlineStatus(){const d=g('inline-status-dropdown');if(d)d.remove();}
+
+/* ══════════════════════════════════════════════════════════
+   SUPABASE
+   ══════════════════════════════════════════════════════════ */
+async function fetchProjects(){
+  setDbStatus('connecting','Connexion…');
+  g('project-list').innerHTML=`<div class="loading-state"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite;font-size:1.2rem"></i> Chargement…</div>`;
+  const{data:pData,error:pErr}=await db.from('projects').select('*').eq('user_id',currentUser.id).order('updated_at',{ascending:false});
+  if(pErr){setDbStatus('error','Erreur BDD');toast('Impossible de charger les projets','error');g('project-list').innerHTML=`<div class="empty-state"><i class="ti ti-database-x"></i><p>${pErr.message}</p></div>`;return;}
+  const ids=(pData||[]).map(p=>p.id);
+  const{data:sData}=ids.length?await db.from('subprojects').select('*').in('parent_id',ids):{data:[]};
+  const{data:nData}=ids.length?await db.from('notes').select('*').in('project_id',ids).order('created_at',{ascending:true}):{data:[]};
+  projects=(pData||[]).map(p=>({
+    id:p.id,number:p.number,name:p.name,cat:p.cat||'pro',
+    status:p.status||'ready',progress:p.progress||0,importance:p.importance||'medium',
+    editor:p.editor||'',client:p.client||'',date:p.date||'',
+    deadline:p.deadline||'',ended:p.ended||null,archived:p.archived||false,
+    updatedAt:(p.updated_at||'').split('T')[0],year:p.year||new Date().getFullYear(),
+    subprojects:(sData||[]).filter(s=>s.parent_id===p.id).map(s=>({
+      id:s.id,number:s.number,name:s.name,status:s.status||'ready',progress:s.progress||0,
+      notes:(nData||[]).filter(n=>n.project_id===p.id&&n.sub_id===s.id).map(n=>({id:n.id,date:(n.created_at||'').split('T')[0],text:n.text})),
+    })),
+    notes:(nData||[]).filter(n=>n.project_id===p.id&&!n.sub_id).map(n=>({id:n.id,date:(n.created_at||'').split('T')[0],text:n.text})),
+  }));
+  setDbStatus('ok','Connecté');renderSidebar();renderView();
+}
+
+async function saveProject(payload,isNew=false){
+  const row={number:payload.number,name:payload.name,cat:payload.cat,status:payload.status,progress:payload.progress,importance:payload.importance,editor:payload.editor,client:payload.client,date:payload.date||null,deadline:payload.deadline||null,ended:payload.ended||null,year:payload.year,archived:payload.archived||false,updated_at:new Date().toISOString(),user_id:currentUser.id};
+  if(isNew){const{data,error}=await db.from('projects').insert(row).select().single();if(error){toast('Erreur création','error');return null;}return data.id;}
+  const{error}=await db.from('projects').update(row).eq('id',payload.id);if(error){toast('Erreur mise à jour','error');return null;}return payload.id;
+}
+async function saveSubproject(parentId,payload,isNew=false){
+  const row={parent_id:parentId,number:payload.number,name:payload.name,status:payload.status,progress:payload.progress};
+  if(isNew){const{data,error}=await db.from('subprojects').insert(row).select().single();if(error){toast('Erreur sous-projet','error');return null;}return data.id;}
+  const{error}=await db.from('subprojects').update(row).eq('id',payload.id);if(error){toast('Erreur sous-projet','error');return null;}return payload.id;
+}
+async function saveNote(projectId,text,subId=null){
+  const row={project_id:projectId,text,created_at:new Date().toISOString()};if(subId)row.sub_id=subId;
+  const{data,error}=await db.from('notes').insert(row).select().single();if(error){toast('Erreur note','error');return null;}return data;
+}
+async function updateNote(noteId,text){const{error}=await db.from('notes').update({text}).eq('id',noteId);if(error){toast('Erreur modification note','error');return false;}return true;}
+async function deleteNote(noteId){const{error}=await db.from('notes').delete().eq('id',noteId);if(error){toast('Erreur suppression note','error');return false;}return true;}
+async function deleteProjectFromDb(id){const{error}=await db.from('projects').delete().eq('id',id);if(error){toast('Erreur suppression','error');return false;}return true;}
+async function deleteSubprojectFromDb(id){const{error}=await db.from('subprojects').delete().eq('id',id);if(error){toast('Erreur suppression sous-projet','error');return false;}return true;}
+
+/* ══════════════════════════════════════════════════════════
+   SIDEBAR
+   ══════════════════════════════════════════════════════════ */
+function renderSidebar(){
+  ['pro','perso'].forEach(cat=>{
+    const container=g('yl-'+cat);if(!container)return;
+    const years=[...new Set(projects.filter(p=>p.cat===cat).map(p=>p.year))].sort((a,b)=>b-a);
+    container.innerHTML=years.map(y=>{
+      const count=projects.filter(p=>p.cat===cat&&p.year===y&&!p.archived).length;
+      const overdue=projects.filter(p=>p.cat===cat&&p.year===y&&!p.archived&&p.deadline&&dlStatus(p.deadline)==='over'&&p.status!=='done').length;
+      const active=selectedCat===cat&&selectedYear===y;
+      return`<div class="year-item ${active?'active':''}" data-y="${y}" data-c="${cat}"><span>${y}${overdue?` <span class="overdue-badge">☠${overdue}</span>`:''}</span><span class="year-count">${count}</span></div>`;
+    }).join('')+`<div class="year-item year-item-add" data-y="new" data-c="${cat}"><i class="ti ti-plus" style="font-size:.65rem"></i> Année</div>`;
+    container.querySelectorAll('.year-item').forEach(item=>{
+      item.addEventListener('click',()=>{
+        if(item.dataset.y==='new'){const y=prompt('Nouvelle année (ex: 2027)');if(y&&!isNaN(y)){selectedYear=parseInt(y);selectedCat=cat;renderSidebar();renderView();}return;}
+        selectedYear=parseInt(item.dataset.y);selectedCat=item.dataset.c;showDashboard=false;renderSidebar();renderView();
+      });
+    });
+  });
+  g('btn-dashboard')?.classList.toggle('active',showDashboard);
+  const ab=g('toggle-archived');if(ab){ab.querySelector('span').textContent=showArchived?'Masquer archivés':'Voir archivés';ab.classList.toggle('active',showArchived);}
+  const title=g('topbar-title');if(title)title.textContent=`${selectedCat==='pro'?'Pro':'Perso'} · ${selectedYear}${showArchived?' · Archives':showDashboard?' · Stats':''}`;
+  const logout=g('btn-logout');if(logout&&currentUser)logout.title=currentUser.email;
+}
+
+function renderView(){
+  const title=g('topbar-title');if(title)title.textContent=`${selectedCat==='pro'?'Pro':'Perso'} · ${selectedYear}${showArchived?' · Archives':showDashboard?' · Stats':''}`;
+  if(showDashboard)renderDashboard();else renderProjects();
+}
+
+/* ══════════════════════════════════════════════════════════
+   SETTINGS
+   ══════════════════════════════════════════════════════════ */
+function openSettings(){
+  const emailEl=g('settings-email');if(emailEl&&currentUser)emailEl.textContent=currentUser.email;
+  const dbUrlEl=g('settings-db-url');if(dbUrlEl)dbUrlEl.textContent=SUPABASE_URL.replace('https://','');
+  const ss=g('settings-last-sync');if(ss&&lastSyncTime){const hhmm=`${String(lastSyncTime.getHours()).padStart(2,'0')}:${String(lastSyncTime.getMinutes()).padStart(2,'0')}`;ss.textContent=`${toEU(todayISO())} à ${hhmm}`;}
+  const sbadge=g('settings-db-badge'),mb=g('db-status');if(sbadge&&mb){sbadge.className=mb.className;sbadge.innerHTML=mb.innerHTML;}
+  g('settings-overlay')?.classList.add('open');
+}
+function closeSettings(){g('settings-overlay')?.classList.remove('open');}
+
+/* ══════════════════════════════════════════════════════════
+   DRAG & DROP
+   ══════════════════════════════════════════════════════════ */
+function setupDragDrop(container){
+  container.querySelectorAll('.proj-card[draggable]').forEach(card=>{
+    card.addEventListener('dragstart',e=>{dragSrcId=card.dataset.pid;card.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+    card.addEventListener('dragend',()=>{card.classList.remove('dragging');container.querySelectorAll('.proj-card').forEach(c=>c.classList.remove('drag-over'));dragSrcId=null;});
+    card.addEventListener('dragover',e=>{e.preventDefault();if(card.dataset.pid===dragSrcId)return;container.querySelectorAll('.proj-card').forEach(c=>c.classList.remove('drag-over'));card.classList.add('drag-over');});
+    card.addEventListener('drop',e=>{e.preventDefault();if(!dragSrcId)return;const tid=card.dataset.pid;if(tid===dragSrcId)return;const list=getFiltered();const si=list.findIndex(p=>p.id===dragSrcId),ti=list.findIndex(p=>p.id===tid);if(si===-1||ti===-1)return;const[m]=list.splice(si,1);list.splice(ti,0,m);saveOrder(list);renderProjects();});
+  });
+}
+function setupSubDragDrop(subContainer,parentId){
+  subContainer.querySelectorAll('.sub-card[draggable]').forEach(card=>{
+    card.addEventListener('dragstart',e=>{subDragSrc=card.dataset.sid;card.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.stopPropagation();});
+    card.addEventListener('dragend',()=>{card.classList.remove('dragging');subContainer.querySelectorAll('.sub-card').forEach(c=>c.classList.remove('drag-over'));subDragSrc=null;});
+    card.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();if(card.dataset.sid===subDragSrc)return;subContainer.querySelectorAll('.sub-card').forEach(c=>c.classList.remove('drag-over'));card.classList.add('drag-over');});
+    card.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();if(!subDragSrc)return;const tid=card.dataset.sid;if(tid===subDragSrc)return;const parent=projects.find(p=>p.id===parentId);const si=parent.subprojects.findIndex(s=>s.id===subDragSrc),ti=parent.subprojects.findIndex(s=>s.id===tid);if(si===-1||ti===-1)return;const[m]=parent.subprojects.splice(si,1);parent.subprojects.splice(ti,0,m);renderProjects();});
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   FILTERING
+   ══════════════════════════════════════════════════════════ */
+function getFiltered(){
+  const q=g('search').value.toLowerCase(),st=g('filter-status').value,imp=g('filter-imp').value,sort=g('sort-by').value;
+  let list=projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&(showArchived?p.archived:!p.archived));
+  if(q)list=list.filter(p=>p.name.toLowerCase().includes(q)||p.number.toLowerCase().includes(q)||(p.editor&&p.editor.toLowerCase().includes(q))||(p.client&&p.client.toLowerCase().includes(q))||p.notes.some(n=>n.text.toLowerCase().includes(q)));
+  if(st)list=list.filter(p=>p.status===st);if(imp)list=list.filter(p=>p.importance===imp);
+  if(sort==='manual')return getOrderedList(list);
+  if(sort==='number')return list.sort((a,b)=>a.number.localeCompare(b.number));
+  if(sort==='name')  return list.sort((a,b)=>a.name.localeCompare(b.name));
+  if(sort==='progress')return list.sort((a,b)=>b.progress-a.progress);
+  if(sort==='deadline')return list.sort((a,b)=>{if(!a.deadline)return 1;if(!b.deadline)return-1;return new Date(a.deadline)-new Date(b.deadline);});
+  return list.sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
+}
+
+/* ══════════════════════════════════════════════════════════
+   BUILD NOTES HTML (last note + toggle)
+   ══════════════════════════════════════════════════════════ */
+function buildNotesSection(notes,actionPrefix,pid,sid=null){
+  if(!notes||!notes.length)return`<div class="note-empty">Aucune note — <button class="btn-inline" data-action="${actionPrefix==='proj'?'add-note':'add-sub-note'}" data-pid="${pid}" data-sid="${sid||''}">ajouter</button></div>`;
+  const sortedNotes=[...notes].reverse(); // newest first
+  const lastNote=sortedNotes[0];
+  const extraNotes=sortedNotes.slice(1);
+  const key=sid?`sub-${sid}`:`proj-${pid}`;
+  const isExpanded=notesExpandedIds.has(key);
+
+  const noteHTML=(n)=>`
+    <div class="note-item" data-note-id="${n.id}">
+      <div class="note-item-header">
+        <div class="note-date"><i class="ti ti-clock" style="font-size:.6rem"></i>${toEU(n.date)}</div>
+        <div class="note-actions">
+          <button class="btn-icon" data-action="${actionPrefix}-edit-note" data-nid="${n.id}" data-pid="${pid}" data-sid="${sid||''}" style="font-size:.75rem"><i class="ti ti-edit"></i></button>
+          <button class="btn-icon" data-action="${actionPrefix}-del-note"  data-nid="${n.id}" data-pid="${pid}" data-sid="${sid||''}" style="font-size:.75rem;color:var(--s-sent-fg)"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+      <div class="note-text" id="note-text-${n.id}">${n.text}</div>
+    </div>`;
+
+  return`
+    ${noteHTML(lastNote)}
+    ${extraNotes.length?`
+      ${isExpanded?extraNotes.map(noteHTML).join(''):''}
+      <button class="notes-toggle" data-action="toggle-notes" data-key="${key}">
+        <i class="ti ti-${isExpanded?'chevron-up':'chevron-down'}"></i>
+        ${isExpanded?'Masquer':'Voir les '+extraNotes.length+' note'+( extraNotes.length>1?'s':'')+' précédente'+(extraNotes.length>1?'s':'')}
+      </button>`:''}`;
+}
+
+/* ══════════════════════════════════════════════════════════
+   BUILD CARDS
+   ══════════════════════════════════════════════════════════ */
+function renderProjects(){
+  const list=getFiltered(),container=g('project-list');if(!container)return;
+  const isDraggable=g('sort-by').value==='manual';
+  if(!list.length){container.innerHTML=`<div class="empty-state"><i class="ti ti-inbox"></i><p>${showArchived?'Aucun projet archivé':'Aucun projet — appuie sur N pour commencer'}</p></div>`;return;}
+  container.innerHTML=list.map(p=>buildProjectCard(p,isDraggable)).join('');
+  attachCardListeners();
+  if(isDraggable)setupDragDrop(container);
+  list.filter(p=>expandedIds.has(p.id)).forEach(p=>{
+    const subCont=container.querySelector(`[data-pid="${p.id}"] .sub-list`);
+    if(subCont)setupSubDragDrop(subCont,p.id);
+  });
+}
+
+function buildMetaTags(p){
+  const dls=dlStatus(p.deadline),dlClass=dls==='over'?'dl-over':dls==='warn'?'dl-warn':'';
+  const clients=p.client?p.client.split(',').map(s=>s.trim()).filter(Boolean):[];
+  return[
+    `<span class="imp-dot ${IMP_DOT[p.importance]}" title="${IMP_LBL[p.importance]}"></span>`,
+    p.editor?`<span class="tag-chip"><i class="ti ti-building" style="font-size:.6rem"></i>${p.editor}</span>`:'',
+    clients.map(c=>`<span class="tag-chip"><i class="ti ti-user" style="font-size:.6rem"></i>${c}</span>`).join(''),
+    p.date?`<span class="tag-chip"><i class="ti ti-calendar" style="font-size:.6rem"></i>${toEU(p.date)}</span>`:'',
+    p.deadline?`<span class="tag-chip ${dlClass}">☠ ${toEU(p.deadline)}</span>`:'',
+    p.ended?`<span class="tag-chip" style="color:var(--s-done-fg)">✓ ${toEU(p.ended)}</span>`:'',
+    p.archived?`<span class="tag-chip" style="color:var(--text-tertiary)"><i class="ti ti-archive" style="font-size:.6rem"></i>Archivé</span>`:'',
+  ].filter(Boolean).join('');
+}
+
+function buildProjectCard(p,draggable=false){
+  const open=expandedIds.has(p.id);
+  const metaTags=buildMetaTags(p);
+  const dragHandle=draggable?`<div class="drag-handle" title="Réordonner"><i class="ti ti-grip-vertical"></i></div>`:'';
+
+  let expandedSection='';
+  if(open){
+    // Subprojects — open by default
+    const subsList=p.subprojects.map(s=>buildSubCard(s,p)).join('');
+    const subsSection=`
+      <div class="subs-section">
+        <div class="section-hdr">Sous-projets (${p.subprojects.length})
+          <button class="btn-inline" data-action="add-sub" data-pid="${p.id}"><i class="ti ti-plus"></i>Ajouter</button>
+        </div>
+        <div class="sub-list">${subsList||`<div class="note-empty">Aucun sous-projet</div>`}</div>
+      </div>`;
+
+    // Notes — last note + toggle
+    const notesSection=`
+      <div class="notes-section" style="border-top:1px solid var(--border)">
+        <div class="section-hdr">Notes
+          <button class="btn-inline" data-action="add-note" data-pid="${p.id}"><i class="ti ti-plus"></i>Ajouter</button>
+        </div>
+        ${buildNotesSection(p.notes,'proj',p.id)}
+      </div>`;
+
+    expandedSection=`<div class="proj-expanded">${subsSection}${notesSection}</div>`;
+  }
+
+  return`<div class="proj-card ${open?'expanded':''}" data-pid="${p.id}" ${draggable?'draggable="true"':''}>
+    <div class="proj-row" data-action="toggle" data-pid="${p.id}">
+      ${dragHandle}
+      <i class="ti ti-chevron-right pr-chevron ${open?'open':''}"></i>
+      <div class="pr-identity">
+        <div class="proj-num">${p.number}</div>
+        <div class="proj-name">${p.name}</div>
+        <div class="proj-meta-tags">${metaTags}</div>
+      </div>
+      <div class="pr-status-block">
+        <span class="status-badge ${STATUS_CLASS[p.status]}" data-action="inline-status" data-pid="${p.id}">${STATUS_LABELS[p.status]}</span>
+        <div class="pr-prog-bar">${pb(p.progress,p.status,'6px')}</div>
+      </div>
+      <div class="pr-actions" onclick="event.stopPropagation()">
+        <button class="btn-edit-main" data-action="edit-proj" data-pid="${p.id}">
+          <i class="ti ti-edit"></i><span>Modifier</span>
+        </button>
+        <button class="btn-more" data-action="more-proj" data-pid="${p.id}" title="Plus d'options">
+          <i class="ti ti-dots-vertical"></i>
+        </button>
+      </div>
+    </div>
+    ${expandedSection}
+  </div>`;
+}
+
+function buildSubCard(s,parent){
+  const open=expandedSubIds.has(s.id);
+  const dls=dlStatus(s.deadline||''),dlClass=dls==='over'?'dl-over':dls==='warn'?'dl-warn':'';
+
+  let expandedSection='';
+  if(open){
+    expandedSection=`<div class="sub-expanded">
+      <div class="section-hdr" style="font-size:var(--fs-xxxs);margin-bottom:4px">Notes
+        <button class="btn-inline" data-action="add-sub-note" data-pid="${parent.id}" data-sid="${s.id}"><i class="ti ti-plus"></i>Ajouter</button>
+      </div>
+      ${buildNotesSection(s.notes,'sub',parent.id,s.id)}
+    </div>`;
+  }
+
+  return`<div class="sub-card" draggable="true" data-sid="${s.id}" data-pid="${parent.id}">
+    <div class="sub-row">
+      <div class="sub-drag-handle"><i class="ti ti-grip-vertical"></i></div>
+      <i class="ti ti-chevron-right sub-chevron ${open?'open':''}" data-action="toggle-sub" data-pid="${parent.id}" data-sid="${s.id}"></i>
+      <div class="sub-identity" data-action="toggle-sub" data-pid="${parent.id}" data-sid="${s.id}">
+        <div class="sub-num">${s.number}</div>
+        <div class="sub-name">${s.name}</div>
+      </div>
+      <div class="sub-status-block">
+        <span class="status-badge ${STATUS_CLASS[s.status]}" data-action="inline-status-sub" data-pid="${parent.id}" data-sid="${s.id}">${STATUS_LABELS[s.status]}</span>
+        <div class="sub-prog">${pb(s.progress,s.status,'5px')}</div>
+      </div>
+      <div class="sub-actions" onclick="event.stopPropagation()">
+        <button class="btn-edit-sub" data-action="edit-sub" data-pid="${parent.id}" data-sid="${s.id}">
+          <i class="ti ti-edit"></i>
+        </button>
+        <button class="btn-more-sub" data-action="more-sub" data-pid="${parent.id}" data-sid="${s.id}" title="Plus d'options">
+          <i class="ti ti-dots-vertical"></i>
+        </button>
+      </div>
+    </div>
+    ${expandedSection}
+  </div>`;
+}
+
+/* ── Card event listeners ── */
+function attachCardListeners(){
+  g('project-list').querySelectorAll('[data-action]').forEach(node=>{
+    node.addEventListener('click',async e=>{
+      e.stopPropagation();
+      const{action,pid,sid,nid,key}=node.dataset;
+      switch(action){
+        case 'toggle':        toggleExpand(pid);break;
+        case 'toggle-sub':    toggleSubExpand(pid,sid);break;
+        case 'toggle-notes':  toggleNotes(key);break;
+        case 'edit-proj':     openEdit(pid);break;
+        case 'more-proj':     openMoreMenu(pid,null,node);break;
+        case 'add-sub':       openNewSub(pid);break;
+        case 'add-note':      openAddNote(pid);break;
+        case 'edit-sub':      openEditSub(pid,sid);break;
+        case 'more-sub':      openMoreMenu(pid,sid,node);break;
+        case 'add-sub-note':  openAddSubNote(pid,sid);break;
+        case 'inline-status': openInlineStatus(pid,node);break;
+        case 'inline-status-sub': openInlineStatus(pid,node,sid);break;
+        case 'proj-edit-note':editNoteInline(nid,pid,null);break;
+        case 'proj-del-note': await delNoteAction(nid,pid,null);break;
+        case 'sub-edit-note': editNoteInline(nid,pid,sid);break;
+        case 'sub-del-note':  await delNoteAction(nid,pid,sid);break;
+      }
+    });
+  });
+}
+
+function toggleExpand(id){expandedIds.has(id)?expandedIds.delete(id):expandedIds.add(id);renderProjects();}
+function toggleSubExpand(pid,sid){expandedSubIds.has(sid)?expandedSubIds.delete(sid):expandedSubIds.add(sid);renderProjects();}
+function toggleNotes(key){notesExpandedIds.has(key)?notesExpandedIds.delete(key):notesExpandedIds.add(key);renderProjects();}
+
+function openMoreMenu(pid,sid,anchorEl){
+  if(!sid){
+    openCtxMenu(anchorEl,[
+      {action:'add-sub',    pid, icon:'ti-folders',      label:'Ajouter sous-projet'},
+      {action:'add-note',   pid, icon:'ti-notes',        label:'Ajouter une note'},
+      {sep:true},
+      {action:'dup-proj',   pid, icon:'ti-copy',         label:'Dupliquer'},
+      {action:'archive-proj',pid,icon:'ti-archive',      label:'Archiver'},
+      {sep:true},
+      {action:'delete-proj',pid, icon:'ti-trash',        label:'Supprimer',danger:true},
+    ]);
+  } else {
+    openCtxMenu(anchorEl,[
+      {action:'add-sub-note',pid,sid,icon:'ti-notes',   label:'Ajouter une note'},
+      {action:'dup-sub',     pid,sid,icon:'ti-copy',    label:'Dupliquer'},
+      {sep:true},
+      {action:'delete-sub',  pid,sid,icon:'ti-trash',   label:'Supprimer',danger:true},
+    ]);
+  }
+}
+
+/* ── Note inline edit ── */
+function editNoteInline(nid,pid,sid){
+  const textEl=g('note-text-'+nid);if(!textEl)return;
+  const original=textEl.textContent;
+  const textarea=document.createElement('textarea');textarea.className='note-edit-area';textarea.value=original;
+  textEl.replaceWith(textarea);textarea.focus();
+  const save=async()=>{
+    const newText=textarea.value.trim();if(!newText)return;
+    const ok=await updateNote(nid,newText);
+    if(ok){
+      const p=projects.find(x=>x.id===pid);
+      if(sid){const s=p.subprojects.find(x=>x.id===sid);const n=s?.notes.find(x=>x.id===nid);if(n)n.text=newText;}
+      else{const n=p.notes.find(x=>x.id===nid);if(n)n.text=newText;}
+      toast('Note modifiée ✓');renderProjects();
+    }
+  };
+  textarea.addEventListener('blur',save);
+  textarea.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.ctrlKey)save();if(e.key==='Escape')renderProjects();});
+}
+
+async function delNoteAction(nid,pid,sid){
+  if(!confirm('Supprimer cette note ?'))return;
+  const ok=await deleteNote(nid);
+  if(ok){
+    const p=projects.find(x=>x.id===pid);
+    if(sid){const s=p.subprojects.find(x=>x.id===sid);if(s)s.notes=s.notes.filter(n=>n.id!==nid);}
+    else p.notes=p.notes.filter(n=>n.id!==nid);
+    toast('Note supprimée');renderProjects();
+  }
+}
+
+/* ── Duplicate / Archive / Delete ── */
+async function dupProject(id){
+  const src=projects.find(x=>x.id===id);if(!src)return;
+  const newP={...src,id:undefined,number:src.number+'_copie',name:src.name+' (copie)',ended:null,archived:false,updatedAt:todayISO(),subprojects:[],notes:[]};
+  const newId=await saveProject({...newP,year:src.year},true);
+  if(newId){newP.id=newId;projects.push(newP);toast('Projet dupliqué ✓');renderSidebar();renderProjects();}
+}
+async function dupSub(parentId,subId){
+  const parent=projects.find(x=>x.id===parentId);const src=parent?.subprojects.find(x=>x.id===subId);if(!src)return;
+  const newId=await saveSubproject(parentId,{number:src.number+'b',name:src.name+' (copie)',status:src.status,progress:src.progress},true);
+  if(newId){parent.subprojects.push({id:newId,number:src.number+'b',name:src.name+' (copie)',status:src.status,progress:src.progress,notes:[]});toast('Sous-projet dupliqué ✓');renderProjects();}
+}
+async function toggleArchive(id){
+  const p=projects.find(x=>x.id===id);if(!p)return;p.archived=!p.archived;
+  await saveProject({...p},false);toast(p.archived?'Projet archivé':'Projet désarchivé');renderSidebar();renderView();
+}
+async function confirmDelete(id){
+  const p=projects.find(x=>x.id===id);if(!confirm(`Supprimer "${p?.name}" ?\nAction irréversible.`))return;
+  if(await deleteProjectFromDb(id)){projects=projects.filter(p=>p.id!==id);expandedIds.delete(id);toast('Projet supprimé');renderSidebar();renderView();}
+}
+async function confirmDeleteSub(parentId,subId){
+  const parent=projects.find(x=>x.id===parentId);const s=parent?.subprojects.find(x=>x.id===subId);
+  if(!confirm(`Supprimer le sous-projet "${s?.name}" ?`))return;
+  if(await deleteSubprojectFromDb(subId)){parent.subprojects=parent.subprojects.filter(x=>x.id!==subId);toast('Sous-projet supprimé');renderProjects();}
+}
+
+/* ══════════════════════════════════════════════════════════
+   MODAL
+   ══════════════════════════════════════════════════════════ */
+function resetModal(){
+  editingId=null;editingSubParentId=null;addingNoteTo=null;addingNoteToSub=null;sliderManual=false;
+  // restore all hidden fields
+  g('modal')?.querySelectorAll('.fg,.form-row').forEach(el=>el.style.display='');
+  ['f-num','f-name','f-editor','f-client','f-note'].forEach(id=>{const el=g(id);if(el){el.value='';el.disabled=false;}});
+  g('f-status-m').value='ready';g('f-imp').value='medium';
+  g('f-progress').value=0;g('f-progress-val').textContent='0%';
+  if(g('f-progress'))g('f-progress').style.accentColor='var(--accent)';
+  g('f-date').value='';g('f-deadline').value='';g('f-cat').value=selectedCat;
+  g('note-field-wrap').style.display='block';g('note-label').textContent='Note initiale';
+  g('f-note').placeholder='Ajouter une note…';g('prog-hint').textContent='Auto selon le statut — ajustable manuellement';
+  g('editor-suggest').style.display='none';g('client-suggest').style.display='none';
+}
+function openModal(title,icon='ti-folder'){g('modal-title').innerHTML=`<i class="ti ${icon}"></i>${title}`;g('modal-overlay').classList.add('open');}
+function closeModal(){g('modal-overlay').classList.remove('open');resetModal();}
+function syncSlider(status){
+  const auto=AUTO_PROG[status];if(auto===null)return;
+  if(!sliderManual){g('f-progress').value=auto;g('f-progress-val').textContent=`${auto}%`;}
+  if(auto===100||status==='done'){if(g('f-progress'))g('f-progress').style.accentColor='#639922';}
+  g('prog-hint').textContent=`Auto : ${auto}% pour "${STATUS_LABELS[status]}" — ajustable`;
+}
+
+function openNewProject(){resetModal();syncSlider('ready');openModal('Nouveau projet','ti-folder-plus');}
+
+function openEdit(id){
+  resetModal();editingId=id;sliderManual=true;
+  const p=projects.find(x=>x.id===id);if(!p){toast('Projet introuvable','error');return;}
+  sv('f-num',p.number);sv('f-name',p.name);sv('f-editor',p.editor);sv('f-client',p.client);
+  g('f-status-m').value=p.status;g('f-imp').value=p.importance||'medium';
+  g('f-progress').value=p.progress;g('f-progress-val').textContent=`${p.progress}%`;
+  if(p.progress===100||p.status==='done')g('f-progress').style.accentColor='#639922';
+  sv('f-date',toEU(p.date));sv('f-deadline',toEU(p.deadline));g('f-cat').value=p.cat;
+  g('note-label').textContent='Nouvelle note (optionnel)';g('f-note').placeholder='Laisser vide pour ne pas ajouter…';
+  g('prog-hint').textContent='Valeur personnalisée';openModal('Modifier le projet','ti-edit');
+}
+
+function openAddNote(id){
+  resetModal();addingNoteTo=id;sliderManual=true;
+  const p=projects.find(x=>x.id===id);if(!p)return;
+  sv('f-num',p.number);sv('f-name',p.name);g('f-num').disabled=true;g('f-name').disabled=true;
+  g('f-status-m').value=p.status;g('f-progress').value=p.progress;g('f-progress-val').textContent=`${p.progress}%`;
+  if(p.progress===100||p.status==='done')g('f-progress').style.accentColor='#639922';
+  sv('f-deadline',toEU(p.deadline));g('f-cat').value=p.cat;
+  // Hide editor/client/date fields
+  g('f-editor')?.closest('.form-row')&&(g('f-editor').closest('.form-row').style.display='none');
+  g('f-date')?.closest('.form-row')&&(g('f-date').closest('.form-row').style.display='none');
+  g('note-label').textContent='Nouvelle note';g('f-note').placeholder="Décris l'avancement…";
+  g('prog-hint').textContent='Valeur personnalisée';openModal(`Note — ${p.number}`,'ti-notes');
+}
+
+function openAddSubNote(parentId,subId){
+  resetModal();addingNoteToSub={parentId,subId};
+  const parent=projects.find(x=>x.id===parentId);const s=parent?.subprojects.find(x=>x.id===subId);if(!s)return;
+  g('note-label').textContent=`Note — ${s.number}`;g('f-note').placeholder='Note sur ce sous-projet…';
+  // Hide all except note field
+  g('modal')?.querySelectorAll('.fg,.form-row').forEach(el=>{if(!el.contains(g('note-field-wrap'))&&el!==g('note-field-wrap'))el.style.display='none';});
+  g('note-field-wrap').style.display='block';
+  openModal(`Note — ${s.number}`,'ti-notes');
+}
+
+function openNewSub(parentId){
+  resetModal();editingSubParentId=parentId;
+  const parent=projects.find(x=>x.id===parentId);if(!parent){toast('Projet introuvable','error');return;}
+  sv('f-num',`${parent.number}_${String(parent.subprojects.length+1).padStart(2,'0')}`);
+  sv('f-editor',parent.editor);sv('f-client',parent.client);
+  g('note-field-wrap').style.display='none';
+  g('f-deadline')?.closest('.form-row')&&(g('f-deadline').closest('.form-row').style.display='none');
+  openModal('Nouveau sous-projet','ti-folders');
+}
+
+function openEditSub(parentId,subId){
+  resetModal();editingSubParentId=parentId;editingId=subId;sliderManual=true;
+  const parent=projects.find(x=>x.id===parentId);const s=parent?.subprojects.find(x=>x.id===subId);if(!s){toast('Sous-projet introuvable','error');return;}
+  sv('f-num',s.number);sv('f-name',s.name);sv('f-editor',parent.editor);sv('f-client',parent.client);
+  g('f-status-m').value=s.status;g('f-progress').value=s.progress;g('f-progress-val').textContent=`${s.progress}%`;
+  if(s.progress===100||s.status==='done')g('f-progress').style.accentColor='#639922';
+  g('note-field-wrap').style.display='none';g('f-deadline')?.closest('.form-row')&&(g('f-deadline').closest('.form-row').style.display='none');
+  g('prog-hint').textContent='Valeur personnalisée';openModal('Modifier le sous-projet','ti-edit');
+}
+
+/* ── Save ── */
+async function handleSave(){
+  const num=gv('f-num'),name=gv('f-name'),status=g('f-status-m').value;
+  let progress=parseInt(g('f-progress').value)||0;if(status==='done')progress=100;
+  const deadline=fromEU(gv('f-deadline')),date=fromEU(gv('f-date'));
+  const noteText=gv('f-note'),editor=gv('f-editor'),client=gv('f-client');
+  const importance=g('f-imp').value,cat=g('f-cat').value,now=todayISO();
+  g('btn-save').disabled=true;g('btn-save').textContent='Enregistrement…';
+  try{
+    if(addingNoteToSub!==null){
+      if(!noteText)return;const{parentId,subId}=addingNoteToSub;
+      const parent=projects.find(x=>x.id===parentId);const s=parent?.subprojects.find(x=>x.id===subId);
+      const nd=await saveNote(parentId,noteText,subId);if(nd){s.notes.push({id:nd.id,date:now,text:noteText});toast('Note ajoutée ✓');}
+      closeModal();renderProjects();return;
+    }
+    if(addingNoteTo!==null){
+      const p=projects.find(x=>x.id===addingNoteTo);const wasNotDone=p.status!=='done';
+      Object.assign(p,{status,progress,updatedAt:now});
+      if(status==='done'&&wasNotDone)p.ended=now;if(status!=='done')p.ended=null;
+      await saveProject({...p},false);
+      if(noteText){const nd=await saveNote(p.id,noteText);if(nd)p.notes.push({id:nd.id,date:now,text:noteText});}
+      toast('Note ajoutée ✓');closeModal();renderView();return;
+    }
+    if(editingSubParentId!==null&&editingId!==null){
+      if(!num||!name)return;const parent=projects.find(x=>x.id===editingSubParentId);const sub=parent.subprojects.find(x=>x.id===editingId);if(!sub)return;
+      Object.assign(sub,{number:num,name,status,progress});await saveSubproject(editingSubParentId,sub,false);parent.updatedAt=now;await saveProject({...parent},false);toast('Sous-projet mis à jour ✓');
+    } else if(editingSubParentId!==null){
+      if(!num||!name)return;const parent=projects.find(x=>x.id===editingSubParentId);
+      const newId=await saveSubproject(editingSubParentId,{number:num,name,status,progress},true);
+      if(newId){parent.subprojects.push({id:newId,number:num,name,status,progress,notes:[]});parent.updatedAt=now;await saveProject({...parent},false);}toast('Sous-projet créé ✓');
+    } else if(editingId!==null){
+      if(!name)return;const p=projects.find(x=>x.id===editingId);if(!p){toast('Projet introuvable','error');return;}
+      const wasNotDone=p.status!=='done';Object.assign(p,{name,status,progress,date,deadline,editor,client,importance,cat,updatedAt:now});
+      if(status==='done'&&wasNotDone)p.ended=now;if(status!=='done')p.ended=null;
+      await saveProject({...p},false);
+      if(noteText){const nd=await saveNote(p.id,noteText);if(nd)p.notes.push({id:nd.id,date:now,text:noteText});}
+      toast('Projet mis à jour ✓');
+    } else {
+      if(!num||!name)return;const year=parseInt(num.split('_')[0])||new Date().getFullYear();
+      const newP={number:num,name,cat,status,progress,importance,editor,client,date,deadline,ended:status==='done'?now:null,archived:false,updatedAt:now,year,subprojects:[],notes:[]};
+      const newId=await saveProject({...newP},true);
+      if(newId){newP.id=newId;if(noteText){const nd=await saveNote(newId,noteText);if(nd)newP.notes.push({id:nd.id,date:now,text:noteText});}projects.push(newP);selectedYear=year;selectedCat=cat;toast('Projet créé ✓');}
+    }
+    closeModal();renderSidebar();renderView();
+  }finally{g('btn-save').disabled=false;g('btn-save').textContent='Enregistrer';}
+}
+
+/* ══════════════════════════════════════════════════════════
+   DASHBOARD
+   ══════════════════════════════════════════════════════════ */
 function renderDashboard(){
   const container=g('project-list');
   const scope=projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&!p.archived);
@@ -226,541 +793,6 @@ function renderDashboard(){
 }
 
 /* ══════════════════════════════════════════════════════════
-   SUPABASE
-   ══════════════════════════════════════════════════════════ */
-async function fetchProjects(){
-  setDbStatus('connecting','Connexion…');
-  g('project-list').innerHTML=`<div class="loading-state"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite;font-size:1.2rem"></i> Chargement…</div>`;
-  const{data:pData,error:pErr}=await db.from('projects').select('*').eq('user_id',currentUser.id).order('updated_at',{ascending:false});
-  if(pErr){setDbStatus('error','Erreur BDD');toast('Impossible de charger les projets','error');g('project-list').innerHTML=`<div class="empty-state"><i class="ti ti-database-x"></i><p>${pErr.message}</p></div>`;return;}
-  const ids=(pData||[]).map(p=>p.id);
-  const{data:sData}=ids.length?await db.from('subprojects').select('*').in('parent_id',ids):{data:[]};
-  const{data:nData}=ids.length?await db.from('notes').select('*').in('project_id',ids).order('created_at',{ascending:true}):{data:[]};
-  // notes for subprojects (stored with sub_id)
-  const{data:snData}=ids.length?await db.from('notes').select('*').not('sub_id','is',null).in('project_id',ids).order('created_at',{ascending:true}):{data:[]};
-
-  projects=(pData||[]).map(p=>({
-    id:p.id,number:p.number,name:p.name,cat:p.cat||'pro',
-    status:p.status||'ready',progress:p.progress||0,importance:p.importance||'medium',
-    editor:p.editor||'',client:p.client||'',date:p.date||'',
-    deadline:p.deadline||'',ended:p.ended||null,archived:p.archived||false,
-    updatedAt:(p.updated_at||'').split('T')[0],year:p.year||new Date().getFullYear(),
-    subprojects:(sData||[]).filter(s=>s.parent_id===p.id).map(s=>({
-      id:s.id,number:s.number,name:s.name,status:s.status||'ready',progress:s.progress||0,
-      notes:(snData||[]).filter(n=>n.sub_id===s.id).map(n=>({id:n.id,date:(n.created_at||'').split('T')[0],text:n.text})),
-    })),
-    notes:(nData||[]).filter(n=>n.project_id===p.id&&!n.sub_id).map(n=>({id:n.id,date:(n.created_at||'').split('T')[0],text:n.text})),
-  }));
-  setDbStatus('ok','Connecté');
-  renderSidebar();renderView();
-}
-
-async function saveProject(payload,isNew=false){
-  const row={number:payload.number,name:payload.name,cat:payload.cat,status:payload.status,progress:payload.progress,importance:payload.importance,editor:payload.editor,client:payload.client,date:payload.date||null,deadline:payload.deadline||null,ended:payload.ended||null,year:payload.year,archived:payload.archived||false,updated_at:new Date().toISOString(),user_id:currentUser.id};
-  if(isNew){const{data,error}=await db.from('projects').insert(row).select().single();if(error){toast('Erreur création','error');return null;}return data.id;}
-  const{error}=await db.from('projects').update(row).eq('id',payload.id);if(error){toast('Erreur mise à jour','error');return null;}return payload.id;
-}
-async function saveSubproject(parentId,payload,isNew=false){
-  const row={parent_id:parentId,number:payload.number,name:payload.name,status:payload.status,progress:payload.progress};
-  if(isNew){const{data,error}=await db.from('subprojects').insert(row).select().single();if(error){toast('Erreur sous-projet','error');return null;}return data.id;}
-  const{error}=await db.from('subprojects').update(row).eq('id',payload.id);if(error){toast('Erreur sous-projet','error');return null;}return payload.id;
-}
-async function saveNote(projectId,text,subId=null){
-  const row={project_id:projectId,text,created_at:new Date().toISOString()};
-  if(subId)row.sub_id=subId;
-  const{data,error}=await db.from('notes').insert(row).select().single();
-  if(error){toast('Erreur note','error');return null;}return data;
-}
-async function updateNote(noteId,text){
-  const{error}=await db.from('notes').update({text}).eq('id',noteId);
-  if(error){toast('Erreur modification note','error');return false;}return true;
-}
-async function deleteNote(noteId){
-  const{error}=await db.from('notes').delete().eq('id',noteId);
-  if(error){toast('Erreur suppression note','error');return false;}return true;
-}
-async function deleteProjectFromDb(id){const{error}=await db.from('projects').delete().eq('id',id);if(error){toast('Erreur suppression','error');return false;}return true;}
-
-/* ══════════════════════════════════════════════════════════
-   SIDEBAR
-   ══════════════════════════════════════════════════════════ */
-function renderSidebar(){
-  ['pro','perso'].forEach(cat=>{
-    const container=g('yl-'+cat);if(!container)return;
-    const years=[...new Set(projects.filter(p=>p.cat===cat).map(p=>p.year))].sort((a,b)=>b-a);
-    container.innerHTML=years.map(y=>{
-      const count=projects.filter(p=>p.cat===cat&&p.year===y&&!p.archived).length;
-      const overdue=projects.filter(p=>p.cat===cat&&p.year===y&&!p.archived&&p.deadline&&dlStatus(p.deadline)==='over'&&p.status!=='done').length;
-      const active=selectedCat===cat&&selectedYear===y;
-      return`<div class="year-item ${active?'active':''}" data-y="${y}" data-c="${cat}"><span>${y}${overdue?` <span class="overdue-badge">☠${overdue}</span>`:''}</span><span class="year-count">${count}</span></div>`;
-    }).join('')+`<div class="year-item year-item-add" data-y="new" data-c="${cat}"><i class="ti ti-plus" style="font-size:.65rem"></i> Année</div>`;
-    container.querySelectorAll('.year-item').forEach(item=>{
-      item.addEventListener('click',()=>{
-        if(item.dataset.y==='new'){const y=prompt('Nouvelle année (ex: 2027)');if(y&&!isNaN(y)){selectedYear=parseInt(y);selectedCat=cat;renderSidebar();renderView();}return;}
-        selectedYear=parseInt(item.dataset.y);selectedCat=item.dataset.c;showDashboard=false;renderSidebar();renderView();
-      });
-    });
-  });
-  g('btn-dashboard')?.classList.toggle('active',showDashboard);
-  const ab=g('toggle-archived');if(ab){ab.querySelector('span').textContent=showArchived?'Masquer archivés':'Voir archivés';ab.classList.toggle('active',showArchived);}
-  const title=g('topbar-title');if(title)title.textContent=`${selectedCat==='pro'?'Pro':'Perso'} · ${selectedYear}${showArchived?' · Archives':showDashboard?' · Stats':''}`;
-  const logout=g('btn-logout');if(logout&&currentUser)logout.title=currentUser.email;
-}
-
-/* ── View router ── */
-function renderView(){
-  const title=g('topbar-title');if(title)title.textContent=`${selectedCat==='pro'?'Pro':'Perso'} · ${selectedYear}${showArchived?' · Archives':showDashboard?' · Stats':''}`;
-  if(showDashboard)renderDashboard();else renderProjects();
-}
-
-/* ══════════════════════════════════════════════════════════
-   SETTINGS
-   ══════════════════════════════════════════════════════════ */
-function openSettings(){
-  const prefs=loadPrefs();
-  const emailEl=g('settings-email');if(emailEl&&currentUser)emailEl.textContent=currentUser.email;
-  const dbUrlEl=g('settings-db-url');if(dbUrlEl)dbUrlEl.textContent=SUPABASE_URL.replace('https://','');
-  const ss=g('settings-last-sync');
-  if(ss&&lastSyncTime){const hhmm=`${String(lastSyncTime.getHours()).padStart(2,'0')}:${String(lastSyncTime.getMinutes()).padStart(2,'0')}`;ss.textContent=`${toEU(todayISO())} à ${hhmm}`;}
-  const sbadge=g('settings-db-badge'),mb=g('db-status');
-  if(sbadge&&mb){sbadge.className=mb.className;sbadge.innerHTML=mb.innerHTML;}
-  g('settings-overlay')?.classList.add('open');
-}
-function closeSettings(){g('settings-overlay')?.classList.remove('open');}
-
-/* ══════════════════════════════════════════════════════════
-   INLINE STATUS
-   ══════════════════════════════════════════════════════════ */
-function openInlineStatus(pid,anchorEl){
-  closeInlineStatus();
-  const p=projects.find(x=>x.id===pid);if(!p)return;
-  const dropdown=document.createElement('div');dropdown.id='inline-status-dropdown';dropdown.className='inline-status-dropdown';
-  dropdown.innerHTML=Object.entries(STATUS_LABELS).map(([k,v])=>`<div class="isd-item ${p.status===k?'active':''}" data-status="${k}" data-pid="${pid}"><span class="status-badge ${STATUS_CLASS[k]}">${v}</span>${p.status===k?'<i class="ti ti-check" style="font-size:.7rem;margin-left:auto;color:var(--text-tertiary)"></i>':''}</div>`).join('');
-  document.body.appendChild(dropdown);
-  const rect=anchorEl.getBoundingClientRect();
-  dropdown.style.top=`${rect.bottom+4+window.scrollY}px`;dropdown.style.left=`${Math.min(rect.left+window.scrollX,window.innerWidth-180)}px`;
-  dropdown.querySelectorAll('.isd-item').forEach(item=>{
-    item.addEventListener('click',async e=>{
-      e.stopPropagation();
-      const newStatus=item.dataset.status,p=projects.find(x=>x.id===item.dataset.pid);if(!p)return;
-      const wasNotDone=p.status!=='done';p.status=newStatus;
-      p.progress=AUTO_PROG[newStatus]!==null?AUTO_PROG[newStatus]:p.progress;
-      if(newStatus==='done'&&wasNotDone)p.ended=todayISO();if(newStatus!=='done')p.ended=null;p.updatedAt=todayISO();
-      closeInlineStatus();renderProjects();await saveProject({...p},false);toast(`Statut → ${STATUS_LABELS[newStatus]} ✓`);renderSidebar();
-    });
-  });
-  setTimeout(()=>document.addEventListener('click',closeInlineStatus,{once:true}),10);
-}
-function closeInlineStatus(){const d=g('inline-status-dropdown');if(d)d.remove();}
-
-/* ══════════════════════════════════════════════════════════
-   DRAG & DROP — projects
-   ══════════════════════════════════════════════════════════ */
-function setupDragDrop(container){
-  container.querySelectorAll('.proj-card[draggable]').forEach(card=>{
-    card.addEventListener('dragstart',e=>{dragSrcId=card.dataset.pid;card.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
-    card.addEventListener('dragend',()=>{card.classList.remove('dragging');container.querySelectorAll('.proj-card').forEach(c=>c.classList.remove('drag-over'));dragSrcId=null;});
-    card.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='move';if(card.dataset.pid===dragSrcId)return;container.querySelectorAll('.proj-card').forEach(c=>c.classList.remove('drag-over'));card.classList.add('drag-over');});
-    card.addEventListener('drop',e=>{e.preventDefault();if(!dragSrcId)return;const tid=card.dataset.pid;if(tid===dragSrcId)return;const list=getFiltered();const si=list.findIndex(p=>p.id===dragSrcId),ti=list.findIndex(p=>p.id===tid);if(si===-1||ti===-1)return;const[m]=list.splice(si,1);list.splice(ti,0,m);saveOrder(list);renderProjects();});
-  });
-}
-
-/* ── Drag & drop — subprojects ── */
-function setupSubDragDrop(subContainer,parentId){
-  subContainer.querySelectorAll('.sub-row[draggable]').forEach(row=>{
-    row.addEventListener('dragstart',e=>{subDragSrc=row.dataset.sid;row.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.stopPropagation();});
-    row.addEventListener('dragend',()=>{row.classList.remove('dragging');subContainer.querySelectorAll('.sub-row').forEach(r=>r.classList.remove('drag-over'));subDragSrc=null;});
-    row.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();if(row.dataset.sid===subDragSrc)return;subContainer.querySelectorAll('.sub-row').forEach(r=>r.classList.remove('drag-over'));row.classList.add('drag-over');});
-    row.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();if(!subDragSrc)return;const tid=row.dataset.sid;if(tid===subDragSrc)return;const parent=projects.find(p=>p.id===parentId);const si=parent.subprojects.findIndex(s=>s.id===subDragSrc),ti=parent.subprojects.findIndex(s=>s.id===tid);if(si===-1||ti===-1)return;const[m]=parent.subprojects.splice(si,1);parent.subprojects.splice(ti,0,m);renderProjects();});
-  });
-}
-
-/* ══════════════════════════════════════════════════════════
-   FILTERING
-   ══════════════════════════════════════════════════════════ */
-function getFiltered(){
-  const q=g('search').value.toLowerCase(),st=g('filter-status').value,imp=g('filter-imp').value,sort=g('sort-by').value;
-  let list=projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&(showArchived?p.archived:!p.archived));
-  if(q)list=list.filter(p=>p.name.toLowerCase().includes(q)||p.number.toLowerCase().includes(q)||(p.editor&&p.editor.toLowerCase().includes(q))||(p.client&&p.client.toLowerCase().includes(q))||p.notes.some(n=>n.text.toLowerCase().includes(q)));
-  if(st)list=list.filter(p=>p.status===st);if(imp)list=list.filter(p=>p.importance===imp);
-  if(sort==='manual')return getOrderedList(list);
-  if(sort==='number')return list.sort((a,b)=>a.number.localeCompare(b.number));
-  if(sort==='name')  return list.sort((a,b)=>a.name.localeCompare(b.name));
-  if(sort==='progress')return list.sort((a,b)=>b.progress-a.progress);
-  if(sort==='deadline')return list.sort((a,b)=>{if(!a.deadline)return 1;if(!b.deadline)return-1;return new Date(a.deadline)-new Date(b.deadline);});
-  return list.sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
-}
-
-/* ══════════════════════════════════════════════════════════
-   RENDER PROJECTS
-   ══════════════════════════════════════════════════════════ */
-function renderProjects(){
-  const list=getFiltered(),container=g('project-list');if(!container)return;
-  const isDraggable=g('sort-by').value==='manual';
-  if(!list.length){container.innerHTML=`<div class="empty-state"><i class="ti ti-inbox"></i><p>${showArchived?'Aucun projet archivé':'Aucun projet — appuie sur N pour commencer'}</p></div>`;return;}
-  container.innerHTML=list.map(p=>buildCard(p,isDraggable)).join('');
-  attachCardListeners();
-  if(isDraggable)setupDragDrop(container);
-  // setup sub drag & drop for expanded
-  list.forEach(p=>{
-    if(expandedIds.has(p.id)){
-      const subCont=container.querySelector(`[data-pid="${p.id}"] .sub-list`);
-      if(subCont)setupSubDragDrop(subCont,p.id);
-    }
-  });
-}
-
-/* ── Build note HTML (shared for project & sub) ── */
-function buildNotes(notes,actionPrefix,pidOrSid,parentPid=null){
-  if(!notes||!notes.length)return`<div class="note-empty">Aucune note</div>`;
-  return[...notes].reverse().map(n=>`
-    <div class="note-item" data-note-id="${n.id}">
-      <div class="note-item-header">
-        <div class="note-date"><i class="ti ti-clock" style="font-size:.6rem"></i>${toEU(n.date)}</div>
-        <div class="note-actions">
-          <button class="btn-icon" data-action="${actionPrefix}-edit-note" data-nid="${n.id}" data-pid="${parentPid||pidOrSid}" data-sid="${parentPid?pidOrSid:''}" style="font-size:.75rem"><i class="ti ti-edit"></i></button>
-          <button class="btn-icon btn-sm-action danger" data-action="${actionPrefix}-del-note"  data-nid="${n.id}" data-pid="${parentPid||pidOrSid}" data-sid="${parentPid?pidOrSid:''}" style="font-size:.75rem;height:auto;border:none;background:none"><i class="ti ti-trash"></i></button>
-        </div>
-      </div>
-      <div class="note-text" id="note-text-${n.id}">${n.text}</div>
-    </div>`).join('');
-}
-
-function buildCard(p,draggable=false){
-  const open=expandedIds.has(p.id),dls=dlStatus(p.deadline),dlClass=dls==='over'?'dl-over':dls==='warn'?'dl-warn':'';
-  const clients=p.client?p.client.split(',').map(s=>s.trim()).filter(Boolean):[];
-  const tags=[
-    `<span class="imp-dot ${IMP_DOT[p.importance]}" title="${IMP_LBL[p.importance]}"></span>`,
-    p.editor?`<span class="tag-chip"><i class="ti ti-building" style="font-size:.6rem"></i>${p.editor}</span>`:'',
-    clients.map(c=>`<span class="tag-chip"><i class="ti ti-user" style="font-size:.6rem"></i>${c}</span>`).join(''),
-    p.deadline?`<span class="tag-chip ${dlClass}">☠ ${toEU(p.deadline)}</span>`:'',
-    p.archived?`<span class="tag-chip" style="color:var(--text-tertiary)"><i class="ti ti-archive" style="font-size:.6rem"></i>Archivé</span>`:'',
-  ].filter(Boolean).join('');
-
-  let detail='';
-  if(open){
-    const subsHTML=`
-      <div class="section-label">Sous-projets
-        <div style="display:flex;gap:6px">
-          <button class="btn-inline" data-action="new-sub" data-pid="${p.id}"><i class="ti ti-plus"></i>Ajouter</button>
-        </div>
-      </div>
-      <div class="sub-list">
-      ${p.subprojects.map(s=>`
-        <div class="sub-row" draggable="true" data-sid="${s.id}" data-pid="${p.id}">
-          <div class="sub-drag-handle"><i class="ti ti-grip-vertical"></i></div>
-          <div class="sub-info"><div class="sub-num">${s.number}</div><div class="sub-name">${s.name}</div></div>
-          <div class="sub-prog">${pb(s.progress,s.status,'4px')}</div>
-          <div class="sub-status"><span class="status-badge ${STATUS_CLASS[s.status]} clickable-status" data-action="inline-status" data-pid="${p.id}">${STATUS_LABELS[s.status]}</span></div>
-          <button class="btn-icon" data-action="dup-sub"  data-pid="${p.id}" data-sid="${s.id}" title="Dupliquer"><i class="ti ti-copy"></i></button>
-          <button class="btn-icon" data-action="edit-sub" data-pid="${p.id}" data-sid="${s.id}"><i class="ti ti-edit"></i></button>
-        </div>
-        <div class="sub-notes-section" style="padding:4px 0 6px 20px;border-bottom:1px solid var(--border)">
-          <div class="section-label" style="font-size:var(--fs-xxxs)">Notes — ${s.name}
-            <button class="btn-inline" data-action="add-sub-note" data-pid="${p.id}" data-sid="${s.id}"><i class="ti ti-plus"></i>Note</button>
-          </div>
-          ${buildNotes(s.notes,'sub',s.id,p.id)}
-        </div>`).join('')}
-      </div>`;
-
-    const notesHTML=buildNotes(p.notes,'proj',p.id);
-
-    detail=`<div class="proj-detail">
-      <div class="det-meta-grid">
-        <div class="det-meta-item"><div class="det-meta-label">Éditeur</div><div class="det-meta-val">${p.editor||'—'}</div></div>
-        <div class="det-meta-item"><div class="det-meta-label">Client(s)</div><div class="det-meta-val">${p.client||'—'}</div></div>
-        <div class="det-meta-item"><div class="det-meta-label">Importance</div><div class="det-meta-val"><span class="imp-dot ${IMP_DOT[p.importance]}"></span>${IMP_LBL[p.importance]}</div></div>
-        <div class="det-meta-item"><div class="det-meta-label">Date début</div><div class="det-meta-val">${toEU(p.date)}</div></div>
-        <div class="det-meta-item ${dls?'dl-'+dls:''}"><div class="det-meta-label">☠ Deadline</div><div class="det-meta-val ${dlClass}">${toEU(p.deadline)}</div></div>
-        ${p.ended?`<div class="det-meta-item done-item"><div class="det-meta-label">✓ Terminé le</div><div class="det-meta-val ended">${toEU(p.ended)}</div></div>`:''}
-      </div>
-      <div class="subproj-section">${subsHTML}</div>
-      <div class="sep"></div>
-      <div class="notes-section">
-        <div class="section-label">Notes du projet
-          <button class="btn-inline" data-action="add-note" data-pid="${p.id}"><i class="ti ti-plus"></i>Nouvelle note</button>
-        </div>
-        ${notesHTML}
-      </div>
-      <div class="det-actions">
-        <button class="btn-sm-action" data-action="edit-proj"    data-pid="${p.id}"><i class="ti ti-edit"></i>Modifier</button>
-        <button class="btn-sm-action" data-action="dup-proj"     data-pid="${p.id}"><i class="ti ti-copy"></i>Dupliquer</button>
-        <button class="btn-sm-action" data-action="archive-proj" data-pid="${p.id}"><i class="ti ti-${p.archived?'archive-off':'archive'}"></i>${p.archived?'Désarchiver':'Archiver'}</button>
-        <button class="btn-sm-action danger" data-action="delete-proj" data-pid="${p.id}"><i class="ti ti-trash"></i>Supprimer</button>
-      </div>
-    </div>`;
-  }
-
-  const dragHandle=draggable?`<div class="drag-handle" title="Réordonner"><i class="ti ti-grip-vertical"></i></div>`:'';
-  return`<div class="proj-card" data-pid="${p.id}" ${draggable?'draggable="true"':''}>
-    <div class="proj-row" data-action="toggle" data-pid="${p.id}">
-      ${dragHandle}<i class="ti ti-chevron-right pr-chevron ${open?'open':''}"></i>
-      <div class="pr-info"><div class="proj-num">${p.number}</div><div class="proj-name">${p.name}</div><div class="proj-tags">${tags}</div></div>
-      <div class="pr-prog">${pb(p.progress,p.status)}</div>
-      <div class="pr-status"><span class="status-badge ${STATUS_CLASS[p.status]} clickable-status" data-action="inline-status" data-pid="${p.id}">${STATUS_LABELS[p.status]}</span></div>
-      <div class="pr-date proj-meta">${toEU(p.updatedAt)}</div>
-      <div class="pr-edit"><button class="btn-icon" data-action="edit-proj" data-pid="${p.id}"><i class="ti ti-edit"></i></button></div>
-    </div>
-    ${detail}
-  </div>`;
-}
-
-/* ── Card listeners ── */
-function attachCardListeners(){
-  g('project-list').querySelectorAll('[data-action]').forEach(node=>{
-    node.addEventListener('click',async e=>{
-      e.stopPropagation();
-      const{action,pid,sid,nid}=node.dataset;
-      switch(action){
-        case 'toggle':        toggleExpand(pid);break;
-        case 'edit-proj':     openEdit(pid);break;
-        case 'dup-proj':      dupProject(pid);break;
-        case 'delete-proj':   confirmDelete(pid);break;
-        case 'archive-proj':  toggleArchive(pid);break;
-        case 'new-sub':       openNewSub(pid);break;
-        case 'edit-sub':      openEditSub(pid,sid);break;
-        case 'dup-sub':       dupSub(pid,sid);break;
-        case 'add-note':      openAddNote(pid);break;
-        case 'add-sub-note':  openAddSubNote(pid,sid);break;
-        case 'inline-status': openInlineStatus(pid,node);break;
-        case 'proj-edit-note':editNoteInline(nid,pid,null);break;
-        case 'proj-del-note': await delNoteAction(nid,pid,null);break;
-        case 'sub-edit-note': editNoteInline(nid,pid,sid);break;
-        case 'sub-del-note':  await delNoteAction(nid,pid,sid);break;
-      }
-    });
-  });
-}
-
-function toggleExpand(id){expandedIds.has(id)?expandedIds.delete(id):expandedIds.add(id);renderProjects();}
-
-/* ── Note inline edit ── */
-function editNoteInline(nid,pid,sid){
-  const textEl=g('note-text-'+nid);if(!textEl)return;
-  const original=textEl.textContent;
-  const textarea=document.createElement('textarea');
-  textarea.className='note-edit-area';textarea.value=original;
-  textEl.replaceWith(textarea);textarea.focus();
-  const save=async()=>{
-    const newText=textarea.value.trim();if(!newText)return;
-    const ok=await updateNote(nid,newText);
-    if(ok){
-      const p=projects.find(x=>x.id===pid);
-      if(sid){const s=p.subprojects.find(x=>x.id===sid);const n=s.notes.find(x=>x.id===nid);if(n)n.text=newText;}
-      else{const n=p.notes.find(x=>x.id===nid);if(n)n.text=newText;}
-      toast('Note modifiée ✓');renderProjects();
-    }
-  };
-  textarea.addEventListener('blur',save);
-  textarea.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.ctrlKey)save();if(e.key==='Escape'){renderProjects();}});
-}
-
-async function delNoteAction(nid,pid,sid){
-  if(!confirm('Supprimer cette note ?'))return;
-  const ok=await deleteNote(nid);
-  if(ok){
-    const p=projects.find(x=>x.id===pid);
-    if(sid){const s=p.subprojects.find(x=>x.id===sid);s.notes=s.notes.filter(n=>n.id!==nid);}
-    else p.notes=p.notes.filter(n=>n.id!==nid);
-    toast('Note supprimée');renderProjects();
-  }
-}
-
-/* ── Duplicate project ── */
-async function dupProject(id){
-  const src=projects.find(x=>x.id===id);if(!src)return;
-  const now=todayISO();
-  const newNum=src.number+'_copie';
-  const newP={...src,id:undefined,number:newNum,name:src.name+' (copie)',ended:null,archived:false,updatedAt:now,subprojects:[],notes:[]};
-  const newId=await saveProject({...newP,year:src.year},true);
-  if(newId){newP.id=newId;projects.push(newP);toast('Projet dupliqué ✓');renderSidebar();renderProjects();}
-}
-
-/* ── Duplicate subproject ── */
-async function dupSub(parentId,subId){
-  const parent=projects.find(x=>x.id===parentId);if(!parent)return;
-  const src=parent.subprojects.find(x=>x.id===subId);if(!src)return;
-  const newNum=src.number+'b';
-  const newId=await saveSubproject(parentId,{number:newNum,name:src.name+' (copie)',status:src.status,progress:src.progress},true);
-  if(newId){parent.subprojects.push({id:newId,number:newNum,name:src.name+' (copie)',status:src.status,progress:src.progress,notes:[]});toast('Sous-projet dupliqué ✓');renderProjects();}
-}
-
-async function toggleArchive(id){
-  const p=projects.find(x=>x.id===id);if(!p)return;p.archived=!p.archived;
-  await saveProject({...p},false);toast(p.archived?'Projet archivé':'Projet désarchivé');renderSidebar();renderView();
-}
-async function confirmDelete(id){
-  const p=projects.find(x=>x.id===id);if(!confirm(`Supprimer "${p?.name}" ?\nCette action est irréversible.`))return;
-  if(await deleteProjectFromDb(id)){projects=projects.filter(p=>p.id!==id);expandedIds.delete(id);toast('Projet supprimé');renderSidebar();renderView();}
-}
-
-/* ══════════════════════════════════════════════════════════
-   MODAL HELPERS
-   ══════════════════════════════════════════════════════════ */
-function resetModal(){
-  editingId=null;editingSubParentId=null;addingNoteTo=null;addingNoteToSub=null;sliderManual=false;
-  ['f-num','f-name','f-editor','f-client','f-note'].forEach(id=>{const el=g(id);if(el){el.value='';el.disabled=false;}});
-  g('f-status-m').value='ready';g('f-imp').value='medium';
-  g('f-progress').value=0;g('f-progress-val').textContent='0%';
-  if(g('f-progress'))g('f-progress').style.accentColor='var(--accent)';
-  g('f-date').value='';g('f-deadline').value='';
-  g('f-cat').value=selectedCat;
-  g('note-field-wrap').style.display='block';
-  g('note-label').textContent='Note initiale';
-  g('f-note').placeholder='Ajouter une note…';
-  g('prog-hint').textContent='Auto selon le statut — ajustable manuellement';
-  g('editor-suggest').style.display='none';g('client-suggest').style.display='none';
-}
-function openModal(title,icon='ti-folder'){g('modal-title').innerHTML=`<i class="ti ${icon}"></i>${title}`;g('modal-overlay').classList.add('open');}
-function closeModal(){g('modal-overlay').classList.remove('open');resetModal();}
-function syncSlider(status){
-  const auto=AUTO_PROG[status];if(auto===null)return;
-  if(!sliderManual){g('f-progress').value=auto;g('f-progress-val').textContent=`${auto}%`;}
-  if(auto===100||status==='done'){if(g('f-progress'))g('f-progress').style.accentColor='#639922';}
-  g('prog-hint').textContent=`Auto : ${auto}% pour "${STATUS_LABELS[status]}" — ajustable`;
-}
-
-function openNewProject(){resetModal();syncSlider('ready');openModal('Nouveau projet','ti-folder-plus');}
-
-function openEdit(id){
-  resetModal();editingId=id;sliderManual=true;
-  const p=projects.find(x=>x.id===id);if(!p){toast('Projet introuvable','error');return;}
-  sv('f-num',p.number);sv('f-name',p.name);sv('f-editor',p.editor);sv('f-client',p.client);
-  g('f-status-m').value=p.status;g('f-imp').value=p.importance||'medium';
-  g('f-progress').value=p.progress;g('f-progress-val').textContent=`${p.progress}%`;
-  if(p.progress===100||p.status==='done')g('f-progress').style.accentColor='#639922';
-  sv('f-date',toEU(p.date));sv('f-deadline',toEU(p.deadline));g('f-cat').value=p.cat;
-  g('note-label').textContent='Nouvelle note (optionnel)';g('f-note').placeholder='Laisser vide pour ne pas ajouter…';
-  g('prog-hint').textContent='Valeur personnalisée';openModal('Modifier le projet','ti-edit');
-}
-
-function openAddNote(id){
-  resetModal();addingNoteTo=id;sliderManual=true;
-  const p=projects.find(x=>x.id===id);if(!p)return;
-  sv('f-num',p.number);sv('f-name',p.name);sv('f-editor',p.editor);sv('f-client',p.client);
-  g('f-num').disabled=true;g('f-name').disabled=true;
-  g('f-status-m').value=p.status;g('f-imp').value=p.importance||'medium';
-  g('f-progress').value=p.progress;g('f-progress-val').textContent=`${p.progress}%`;
-  if(p.progress===100||p.status==='done')g('f-progress').style.accentColor='#639922';
-  sv('f-deadline',toEU(p.deadline));g('f-cat').value=p.cat;
-  g('note-label').textContent='Nouvelle note';g('f-note').placeholder="Décris l'avancement…";
-  g('prog-hint').textContent='Valeur personnalisée';openModal(`Note — ${p.number}`,'ti-notes');
-}
-
-function openAddSubNote(parentId,subId){
-  resetModal();addingNoteToSub={parentId,subId};
-  const parent=projects.find(x=>x.id===parentId);if(!parent)return;
-  const s=parent.subprojects.find(x=>x.id===subId);if(!s)return;
-  g('note-field-wrap').style.display='block';
-  g('note-label').textContent=`Note pour ${s.number}`;
-  g('f-note').placeholder="Note sur ce sous-projet…";
-  // hide other fields
-  ['f-num','f-name','f-editor','f-client','f-date','f-deadline','f-cat'].forEach(id=>g(id)?.closest('.fg')&&(g(id).closest('.fg,.form-row').style.display='none'));
-  g('f-status-m')?.closest('.form-row')&&(g('f-status-m').closest('.form-row').style.display='none');
-  g('f-progress')?.closest('.fg')&&(g('f-progress').closest('.fg').style.display='none');
-  openModal(`Note — ${s.number}`,'ti-notes');
-}
-
-function openNewSub(parentId){
-  resetModal();editingSubParentId=parentId;
-  const parent=projects.find(x=>x.id===parentId);if(!parent){toast('Projet parent introuvable','error');return;}
-  sv('f-num',`${parent.number}_${String(parent.subprojects.length+1).padStart(2,'0')}`);
-  // inherit editor & client from parent
-  sv('f-editor',parent.editor);sv('f-client',parent.client);
-  g('note-field-wrap').style.display='none';
-  openModal('Nouveau sous-projet','ti-folders');
-}
-
-function openEditSub(parentId,subId){
-  resetModal();editingSubParentId=parentId;editingId=subId;sliderManual=true;
-  const parent=projects.find(x=>x.id===parentId);if(!parent)return;
-  const s=parent.subprojects.find(x=>x.id===subId);if(!s){toast('Sous-projet introuvable','error');return;}
-  sv('f-num',s.number);sv('f-name',s.name);
-  // inherit editor & client from parent
-  sv('f-editor',parent.editor);sv('f-client',parent.client);
-  g('f-status-m').value=s.status;g('f-progress').value=s.progress;g('f-progress-val').textContent=`${s.progress}%`;
-  if(s.progress===100||s.status==='done')g('f-progress').style.accentColor='#639922';
-  g('note-field-wrap').style.display='none';g('prog-hint').textContent='Valeur personnalisée';
-  openModal('Modifier le sous-projet','ti-edit');
-}
-
-/* ══════════════════════════════════════════════════════════
-   MODAL SAVE
-   ══════════════════════════════════════════════════════════ */
-async function handleSave(){
-  const num=gv('f-num'),name=gv('f-name'),status=g('f-status-m').value;
-  let progress=parseInt(g('f-progress').value)||0;
-  if(status==='done')progress=100;
-  const deadline=fromEU(gv('f-deadline')),date=fromEU(gv('f-date'));
-  const noteText=gv('f-note'),editor=gv('f-editor'),client=gv('f-client');
-  const importance=g('f-imp').value,cat=g('f-cat').value,now=todayISO();
-
-  g('btn-save').disabled=true;g('btn-save').textContent='Enregistrement…';
-  try{
-    // Add sub note
-    if(addingNoteToSub!==null){
-      if(!noteText)return;
-      const{parentId,subId}=addingNoteToSub;
-      const parent=projects.find(x=>x.id===parentId);
-      const s=parent.subprojects.find(x=>x.id===subId);
-      const nd=await saveNote(parentId,noteText,subId);
-      if(nd){s.notes.push({id:nd.id,date:now,text:noteText});toast('Note ajoutée ✓');}
-      closeModal();renderProjects();return;
-    }
-    // Add project note
-    if(addingNoteTo!==null){
-      const p=projects.find(x=>x.id===addingNoteTo);
-      const wasNotDone=p.status!=='done';
-      Object.assign(p,{status,progress,importance,updatedAt:now});
-      if(status==='done'&&wasNotDone)p.ended=now;if(status!=='done')p.ended=null;
-      await saveProject({...p},false);
-      if(noteText){const nd=await saveNote(p.id,noteText);if(nd)p.notes.push({id:nd.id,date:now,text:noteText});}
-      toast('Note ajoutée ✓');closeModal();renderView();return;
-    }
-    // Edit sub
-    if(editingSubParentId!==null&&editingId!==null){
-      if(!num||!name)return;
-      const parent=projects.find(x=>x.id===editingSubParentId);
-      const sub=parent.subprojects.find(x=>x.id===editingId);
-      if(!sub)return;Object.assign(sub,{number:num,name,status,progress});
-      await saveSubproject(editingSubParentId,sub,false);parent.updatedAt=now;await saveProject({...parent},false);
-      toast('Sous-projet mis à jour ✓');
-    }
-    // New sub
-    else if(editingSubParentId!==null){
-      if(!num||!name)return;
-      const parent=projects.find(x=>x.id===editingSubParentId);
-      const newId=await saveSubproject(editingSubParentId,{number:num,name,status,progress},true);
-      if(newId){parent.subprojects.push({id:newId,number:num,name,status,progress,notes:[]});parent.updatedAt=now;await saveProject({...parent},false);}
-      toast('Sous-projet créé ✓');
-    }
-    // Edit project
-    else if(editingId!==null){
-      if(!name)return;
-      const p=projects.find(x=>x.id===editingId);if(!p){toast('Projet introuvable','error');return;}
-      const wasNotDone=p.status!=='done';Object.assign(p,{name,status,progress,date,deadline,editor,client,importance,cat,updatedAt:now});
-      if(status==='done'&&wasNotDone)p.ended=now;if(status!=='done')p.ended=null;
-      await saveProject({...p},false);
-      if(noteText){const nd=await saveNote(p.id,noteText);if(nd)p.notes.push({id:nd.id,date:now,text:noteText});}
-      toast('Projet mis à jour ✓');
-    }
-    // New project
-    else{
-      if(!num||!name)return;
-      const year=parseInt(num.split('_')[0])||new Date().getFullYear();
-      const newP={number:num,name,cat,status,progress,importance,editor,client,date,deadline,ended:status==='done'?now:null,archived:false,updatedAt:now,year,subprojects:[],notes:[]};
-      const newId=await saveProject({...newP},true);
-      if(newId){
-        newP.id=newId;
-        if(noteText){const nd=await saveNote(newId,noteText);if(nd)newP.notes.push({id:nd.id,date:now,text:noteText});}
-        projects.push(newP);selectedYear=year;selectedCat=cat;toast('Projet créé ✓');
-      }
-    }
-    closeModal();renderSidebar();renderView();
-  }finally{g('btn-save').disabled=false;g('btn-save').textContent='Enregistrer';}
-}
-
-/* ══════════════════════════════════════════════════════════
    AUTH
    ══════════════════════════════════════════════════════════ */
 function renderLoginScreen(){
@@ -778,16 +810,9 @@ function renderLoginScreen(){
     </div>`;
   let isSignUp=false;
   g('auth-switch').addEventListener('click',()=>{isSignUp=!isSignUp;g('auth-btn').textContent=isSignUp?'Créer le compte':'Se connecter';g('auth-switch').innerHTML=isSignUp?`Déjà un compte ? <span style="color:var(--accent);font-weight:500">Se connecter</span>`:`Pas encore de compte ? <span style="color:var(--accent);font-weight:500">Créer un compte</span>`;});
-  g('forgot-pw').addEventListener('click',async()=>{
-    const email=g('auth-email').value.trim(),errBox=g('login-error');
-    if(!email){errBox.textContent='Entrez votre email ci-dessus.';errBox.style.display='block';return;}
-    const{error}=await db.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
-    errBox.style.cssText='display:block;background:var(--s-done-bg);color:var(--s-done-fg);border-radius:8px;padding:8px 10px;font-size:var(--fs-xxs);margin-bottom:10px';
-    errBox.textContent=error?error.message:'Email de réinitialisation envoyé.';
-  });
+  g('forgot-pw').addEventListener('click',async()=>{const email=g('auth-email').value.trim(),errBox=g('login-error');if(!email){errBox.textContent='Entrez votre email ci-dessus.';errBox.style.display='block';return;}const{error}=await db.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});errBox.style.cssText='display:block;background:var(--s-done-bg);color:var(--s-done-fg);border-radius:8px;padding:8px 10px;font-size:var(--fs-xxs);margin-bottom:10px';errBox.textContent=error?error.message:'Email de réinitialisation envoyé.';});
   const doAuth=async()=>{
-    const email=g('auth-email').value.trim(),password=g('auth-password').value,errBox=g('login-error');
-    errBox.style.display='none';
+    const email=g('auth-email').value.trim(),password=g('auth-password').value,errBox=g('login-error');errBox.style.display='none';
     if(!email||!password){errBox.textContent='Merci de remplir tous les champs.';errBox.style.display='block';return;}
     g('auth-btn').disabled=true;g('auth-btn').textContent='Chargement…';
     const{data,error}=isSignUp?await db.auth.signUp({email,password}):await db.auth.signInWithPassword({email,password});
@@ -811,20 +836,15 @@ async function checkAuth(){
 document.head.insertAdjacentHTML('beforeend',`<style>
   @keyframes spin    {to{transform:rotate(360deg)}}
   @keyframes slideIn {from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+  @keyframes fadeIn  {from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
   #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)}
   #login-box{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px 24px;width:340px;box-shadow:var(--shadow-md)}
   .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:20px}
   .login-error{background:var(--s-sent-bg);color:var(--s-sent-fg);border-radius:var(--radius-md);padding:8px 10px;font-size:var(--fs-xxs);margin-bottom:10px}
-  .inline-status-dropdown{position:absolute;background:var(--bg-card);border:1px solid var(--border-md);border-radius:var(--radius-md);box-shadow:var(--shadow-md);z-index:500;min-width:164px;padding:4px}
-  .isd-item{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:5px;cursor:pointer;transition:background .1s}
-  .isd-item:hover,.isd-item.active{background:var(--bg-hover)}
-  .clickable-status{cursor:pointer;transition:opacity .12s}.clickable-status:hover{opacity:.75}
-  .drag-handle{flex:0 0 14px;color:var(--text-tertiary);cursor:grab;font-size:.9rem;display:flex;align-items:center;opacity:0;transition:opacity .15s}
-  .proj-row:hover .drag-handle{opacity:1}
-  .dragging{opacity:.45;border:1.5px dashed var(--border-md)!important}
-  .drag-over{border-color:var(--accent)!important;box-shadow:0 0 0 2px var(--accent-light)!important}
-  .overdue-badge{color:var(--dl-over);font-size:var(--fs-xxxs)}
-  .sub-notes-section .section-label{margin-bottom:4px}
+  .prog-wrap{display:flex;align-items:center;gap:4px}
+  .prog-bar{flex:1;background:var(--bg-hover);border-radius:4px;overflow:hidden}
+  .prog-fill{height:100%;border-radius:4px;transition:width .35s}
+  .prog-pct{font-size:var(--fs-xxxs);color:var(--text-secondary);min-width:26px;text-align:right;font-family:var(--font-mono)}
 </style>`);
 
 /* ══════════════════════════════════════════════════════════
@@ -832,49 +852,43 @@ document.head.insertAdjacentHTML('beforeend',`<style>
    ══════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded',()=>{
 
-  /* Modal projet */
   g('btn-new')?.addEventListener('click',openNewProject);
   g('btn-cancel')?.addEventListener('click',closeModal);
   g('btn-save')?.addEventListener('click',handleSave);
   g('modal-overlay')?.addEventListener('click',e=>{if(e.target===g('modal-overlay'))closeModal();});
 
-  /* Slider — status sync + color */
   g('f-status-m')?.addEventListener('change',function(){sliderManual=false;syncSlider(this.value);});
   g('f-progress')?.addEventListener('input',function(){
-    sliderManual=true;
-    const pct=parseInt(this.value)||0;
+    sliderManual=true;const pct=parseInt(this.value)||0;
     g('f-progress-val').textContent=pct+'%';
     this.style.accentColor=pct>=100?'#639922':'var(--accent)';
     const statusEl=g('f-status-m');
-    if(pct===100&&statusEl&&statusEl.value!=='done'){statusEl.value='done';g('prog-hint').textContent='Statut passé à "Done" automatiquement ✓';}
-    else if(pct<100&&statusEl&&statusEl.value==='done'&&sliderManual){statusEl.value='ongoing';syncSlider('ongoing');g('prog-hint').textContent='Statut repassé à "Ongoing"';}
+    if(pct===100&&statusEl&&statusEl.value!=='done'){statusEl.value='done';g('prog-hint').textContent='Statut passé à "Done" ✓';}
+    else if(pct<100&&statusEl&&statusEl.value==='done'&&sliderManual){statusEl.value='ongoing';syncSlider('ongoing');}
     else g('prog-hint').textContent='Valeur personnalisée';
   });
 
-  /* Filtres */
   g('search')?.addEventListener('input',renderView);
   g('filter-status')?.addEventListener('change',renderView);
   g('filter-imp')?.addEventListener('change',renderView);
   g('sort-by')?.addEventListener('change',renderView);
 
-  /* Sidebar tools */
   g('btn-dashboard')?.addEventListener('click',()=>{showDashboard=!showDashboard;g('btn-dashboard')?.classList.toggle('active',showDashboard);renderView();});
   g('btn-export')?.addEventListener('click',exportCSV);
   g('toggle-archived')?.addEventListener('click',()=>{showArchived=!showArchived;renderSidebar();renderView();});
 
-  /* Settings */
   g('btn-settings')?.addEventListener('click',openSettings);
   g('btn-settings-hdr')?.addEventListener('click',openSettings);
   g('btn-settings-close')?.addEventListener('click',closeSettings);
   g('settings-overlay')?.addEventListener('click',e=>{if(e.target===g('settings-overlay'))closeSettings();});
-  g('toggle-theme')?.addEventListener('click',function(){const isDark=this.getAttribute('aria-checked')==='true';const newTheme=isDark?'light':'dark';document.documentElement.setAttribute('data-theme',newTheme);this.setAttribute('aria-checked',!isDark?'true':'false');savePrefs({theme:newTheme});});
-  document.querySelectorAll('.fs-btn').forEach(btn=>btn.addEventListener('click',()=>{const size=btn.dataset.size;document.documentElement.setAttribute('data-font-size',size);document.querySelectorAll('.fs-btn').forEach(b=>b.classList.toggle('active',b.dataset.size===size));savePrefs({fontSize:size});}));
-  document.querySelectorAll('.accent-swatch').forEach(btn=>btn.addEventListener('click',()=>{const accent=btn.dataset.accent;document.documentElement.setAttribute('data-accent',accent);document.querySelectorAll('.accent-swatch').forEach(b=>b.classList.toggle('active',b.dataset.accent===accent));savePrefs({accent});}));
+  g('toggle-theme')?.addEventListener('click',function(){const isDark=this.getAttribute('aria-checked')==='true';const t=isDark?'light':'dark';document.documentElement.setAttribute('data-theme',t);this.setAttribute('aria-checked',!isDark?'true':'false');savePrefs({theme:t});});
+  document.querySelectorAll('.fs-btn').forEach(btn=>btn.addEventListener('click',()=>{const s=btn.dataset.size;document.documentElement.setAttribute('data-font-size',s);document.querySelectorAll('.fs-btn').forEach(b=>b.classList.toggle('active',b.dataset.size===s));savePrefs({fontSize:s});}));
+  document.querySelectorAll('.accent-swatch').forEach(btn=>btn.addEventListener('click',()=>{const a=btn.dataset.accent;document.documentElement.setAttribute('data-accent',a);document.querySelectorAll('.accent-swatch').forEach(b=>b.classList.toggle('active',b.dataset.accent===a));savePrefs({accent:a});}));
   g('btn-logout-settings')?.addEventListener('click',async()=>{closeSettings();await db.auth.signOut();currentUser=null;renderLoginScreen();});
   g('btn-logout')?.addEventListener('click',async()=>{await db.auth.signOut();currentUser=null;renderLoginScreen();});
   g('btn-reconnect')?.addEventListener('click',()=>{if(currentUser){setDbStatus('connecting','Reconnexion…');fetchProjects();}});
 
-  /* Mobile */
+  // Mobile
   function openSidebar(){g('sidebar')?.classList.add('open');g('sidebar-overlay')?.classList.add('open');}
   function closeSidebar(){g('sidebar')?.classList.remove('open');g('sidebar-overlay')?.classList.remove('open');}
   g('btn-menu')?.addEventListener('click',openSidebar);
@@ -893,26 +907,26 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
   });
 
-  /* Sidebar resize */
+  // Sidebar resize
   const resizer=g('sidebar-resizer'),sidebar=g('sidebar');let isResizing=false,startX=0,startW=0;
   resizer?.addEventListener('mousedown',e=>{if(window.innerWidth<=640)return;isResizing=true;startX=e.clientX;startW=sidebar.offsetWidth;resizer.classList.add('dragging');document.body.style.cursor='col-resize';document.body.style.userSelect='none';});
   document.addEventListener('mousemove',e=>{if(!isResizing)return;const newW=Math.min(300,Math.max(120,startW+(e.clientX-startX)));sidebar.style.width=newW+'px';});
   document.addEventListener('mouseup',()=>{if(!isResizing)return;isResizing=false;resizer?.classList.remove('dragging');document.body.style.cursor='';document.body.style.userSelect='';savePrefs({sidebarW:sidebar.offsetWidth});});
 
-  /* Date masks */
+  // Date masks
   [g('f-date'),g('f-deadline')].forEach(el=>{if(el)maskDate(el);});
 
-  /* Autocomplete — show all on focus, append for client */
+  // Autocomplete
   setupAC('f-editor','editor-suggest',()=>getUniqueList('editor'));
   setupAC('f-client','client-suggest',()=>getUniqueList('client'),{append:true});
 
-  /* Keyboard */
+  // Keyboard
   document.addEventListener('keydown',e=>{
     if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
     if(e.key==='n'||e.key==='N'){e.preventDefault();openNewProject();}
     if(e.key==='d'||e.key==='D'){showDashboard=!showDashboard;g('btn-dashboard')?.classList.toggle('active',showDashboard);renderView();}
     if(e.key==='p'||e.key==='P')openSettings();
-    if(e.key==='Escape'){closeModal();closeSettings();closeInlineStatus();}
+    if(e.key==='Escape'){closeModal();closeSettings();closeInlineStatus();closeCtxMenu();}
   });
 
   checkAuth();
