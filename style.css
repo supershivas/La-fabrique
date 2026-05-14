@@ -137,14 +137,15 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .pr-chevron{flex:0 0 14px;font-size:var(--fs-sm);color:var(--text-tertiary);transition:transform .18s}
 .pr-chevron.open{transform:rotate(90deg)}
 
-/* Bloc identity : num + nom + barre en colonne — flex:1 */
-.pr-identity{flex:1;min-width:0;overflow:hidden;display:flex;flex-direction:column;gap:4px}
-.pr-nameline{display:flex;align-items:baseline;gap:7px;min-width:0;overflow:hidden}
+/* Bloc identity : flex:1, contient nameline en ligne */
+.pr-identity{flex:1;min-width:0;overflow:hidden}
+/* Nameline = num + nom + barre sur la même ligne */
+.pr-nameline{display:flex;align-items:center;gap:10px;min-width:0}
 .proj-num{font-size:var(--fs-xxxs);font-weight:500;color:var(--text-tertiary);font-family:var(--font-mono);flex-shrink:0}
-.proj-name{font-size:.95rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proj-name{font-size:.95rem;font-weight:600;color:var(--text-primary);white-space:nowrap;flex-shrink:0;max-width:340px;overflow:hidden;text-overflow:ellipsis}
 
-/* Barre statut — pleine largeur du bloc identity */
-.pr-status-block{width:100%;cursor:pointer;transition:opacity .12s}
+/* Barre statut — flex:1, prend tout l'espace restant dans la nameline */
+.pr-status-block{flex:1;min-width:120px;cursor:pointer;transition:opacity .12s}
 .pr-status-block:hover{opacity:.85}
 
 /* Bloc droite : meta chips + imp dot + boutons */
@@ -162,7 +163,7 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .sub-status-block{flex:0 0 auto;width:130px;cursor:pointer;transition:opacity .12s}
 .sub-status-block:hover{opacity:.8}
 .prog-wrap{width:100%}
-.prog-bar-bg{position:relative;height:26px;border-radius:var(--radius-sm);background:var(--bg-hover);overflow:hidden;display:flex;align-items:center}
+.prog-bar-bg{position:relative;height:30px;border-radius:var(--radius-sm);background:var(--bg-hover);overflow:hidden;display:flex;align-items:center}
 .sub-status-block .prog-bar-bg{height:22px}
 .prog-fill-bg{position:absolute;inset:0;height:100%;border-radius:var(--radius-sm);transition:width .4s ease}
 .prog-label{position:relative;z-index:1;font-size:var(--fs-xxs);font-weight:700;letter-spacing:.02em;white-space:nowrap;padding:0 10px}
