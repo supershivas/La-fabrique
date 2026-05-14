@@ -453,30 +453,28 @@ function buildProjectCard(p,draggable=false){
   }
 
   return`<div class="proj-card ${open?'expanded':''}" data-pid="${p.id}" ${draggable?'draggable="true"':''}>
-    <div class="proj-card-inner">
-      <div class="proj-toprow" data-action="toggle" data-pid="${p.id}">
-        ${dragHandle}
-        <i class="ti ti-chevron-right pr-chevron ${open?'open':''}"></i>
-        <div class="proj-nameline">
-          <span class="proj-num">${p.number}</span>
-          <span class="proj-name">${p.name}</span>
-        </div>
-        <div class="pr-actions" onclick="event.stopPropagation()">
-          <span class="imp-dot ${IMP_DOT[p.importance]}" title="${IMP_LBL[p.importance]}"></span>
-          <button class="btn-edit-main" data-action="edit-proj" data-pid="${p.id}">
-            <i class="ti ti-edit"></i><span>Modifier</span>
-          </button>
-          <button class="btn-more" data-action="more-proj" data-pid="${p.id}" title="Plus d'options">
-            <i class="ti ti-dots-vertical"></i>
-          </button>
-        </div>
+    <div class="pc-toprow" data-action="toggle" data-pid="${p.id}">
+      ${dragHandle}
+      <i class="ti ti-chevron-right pr-chevron ${open?'open':''}"></i>
+      <div class="pc-nameline">
+        <span class="proj-num">${p.number}</span>
+        <span class="proj-name">${p.name}</span>
       </div>
-      <div class="pr-status-block" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()">
-        ${pb(p.progress,p.status)}
+      <div class="pr-actions" onclick="event.stopPropagation()">
+        <span class="imp-dot ${IMP_DOT[p.importance]}" title="${IMP_LBL[p.importance]}"></span>
+        <button class="btn-edit-main" data-action="edit-proj" data-pid="${p.id}">
+          <i class="ti ti-edit"></i><span>Modifier</span>
+        </button>
+        <button class="btn-more" data-action="more-proj" data-pid="${p.id}" title="Plus d'options">
+          <i class="ti ti-dots-vertical"></i>
+        </button>
       </div>
-      <div class="proj-metatow">
-        <div class="proj-meta-tags">${metaTags}</div>
-      </div>
+    </div>
+    <div class="pc-statusbar" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()">
+      ${pb(p.progress,p.status)}
+    </div>
+    <div class="pc-meta">
+      <div class="proj-meta-tags">${metaTags}</div>
     </div>
     ${expandedSection}
   </div>`;
