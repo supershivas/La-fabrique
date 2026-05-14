@@ -157,9 +157,10 @@ input:disabled{opacity:.5;cursor:not-allowed}
 
 /* Col 5 — actions */
 .pr-col-actions{display:flex;align-items:center;gap:4px;padding:0 0 0 4px}
+.pr-col-actions .imp-dot{margin-right:8px}
 .tag-chip{font-size:var(--fs-xxxs);color:var(--text-secondary);display:inline-flex;align-items:center;gap:2px;white-space:nowrap}
 .tag-chip.dl-warn{color:var(--dl-warn);font-weight:500}.tag-chip.dl-over{color:var(--dl-over);font-weight:500}
-.imp-dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
+.imp-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0;cursor:default}
 .imp-low{background:var(--imp-low)}.imp-med{background:var(--imp-med)}.imp-high{background:var(--imp-high)}
 
 /* .pr-status-block — gardé pour compatibilité sous-projets */
@@ -167,7 +168,7 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .prog-wrap{width:100%}
 .prog-bar-bg{position:relative;height:28px;border-radius:var(--radius-sm);background:var(--bg-hover);overflow:hidden;display:flex;align-items:center}
 .sub-status-block .prog-bar-bg{height:22px}
-.prog-fill-bg{position:absolute;inset:0;height:100%;border-radius:var(--radius-sm);transition:width .4s ease}
+.prog-fill-bg{position:absolute;inset:0;height:100%;border-radius:var(--radius-sm);transition:width .4s ease;opacity:.35}
 .prog-label{position:relative;z-index:1;font-size:var(--fs-xs);font-weight:700;letter-spacing:.02em;white-space:nowrap;padding:0 12px}
 /* Garder status-badge pour le dashboard et dropdowns */
 .status-badge{font-size:var(--fs-xxs);font-weight:600;padding:3px 9px;border-radius:10px;white-space:nowrap;display:inline-block;cursor:pointer;transition:opacity .12s}
