@@ -460,9 +460,9 @@ function buildProjectCard(p,draggable=false){
         <div class="pr-nameline">
           <span class="proj-num">${p.number}</span>
           <span class="proj-name">${p.name}</span>
-        </div>
-        <div class="pr-status-block" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()">
-          ${pb(p.progress,p.status)}
+          <div class="pr-status-block" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()">
+            ${pb(p.progress,p.status)}
+          </div>
         </div>
       </div>
       <div class="pr-right" onclick="event.stopPropagation()">
