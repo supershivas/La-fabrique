@@ -147,8 +147,9 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .proj-name{font-size:.9rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* Col 3 — barre de progression */
-.pr-col-bar{padding:0 8px;cursor:pointer;transition:opacity .12s}
+.pr-col-bar{padding:0 8px;cursor:pointer;transition:opacity .12s;display:flex;align-items:center;min-width:0}
 .pr-col-bar:hover{opacity:.85}
+.pr-col-bar .prog-wrap,.sub-col-bar .prog-wrap{width:100%;min-width:0}
 
 /* Col 4 — meta : éditeur, client, dates */
 .pr-col-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:0 8px}
@@ -217,7 +218,7 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .sub-col-name{display:flex;flex-direction:column;justify-content:center;gap:1px;padding:8px 12px 8px 4px;min-width:0;overflow:hidden}
 .sub-num{font-size:var(--fs-xxxs);font-family:var(--font-mono);color:var(--text-tertiary)}
 .sub-name{font-size:var(--fs-sm);font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sub-col-bar{padding:0 8px;cursor:pointer;transition:opacity .12s}
+.sub-col-bar{padding:0 8px;cursor:pointer;transition:opacity .12s;display:flex;align-items:center;min-width:0}
 .sub-col-bar:hover{opacity:.85}
 .sub-col-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:0 8px}
 .sub-col-actions{display:flex;align-items:center;gap:3px;padding:0 0 0 4px}
