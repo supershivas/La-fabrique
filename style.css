@@ -130,43 +130,44 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .proj-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:6px;overflow:hidden;transition:box-shadow .15s,background .2s,border-color .2s}
 .proj-card:hover{box-shadow:var(--shadow-sm)}
 
-/* Row principal — même logique que sub-row */
-.pr-row{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;min-width:0}
+/* Grid 5 colonnes :
+   ctrl(36px) | nom(minmax 180px, 1fr) | barre(minmax 160px, 2fr) | meta(minmax 160px, 1.5fr) | actions(auto) */
+.pr-row{display:grid;grid-template-columns:36px minmax(180px,1fr) minmax(160px,2fr) minmax(160px,1.5fr) auto;align-items:center;padding:0 8px 0 4px;cursor:pointer;min-height:44px;gap:0}
 .pr-row:hover{background:var(--bg-hover)}
 .proj-card.expanded>.pr-row{background:var(--bg-hover)}
-.pr-chevron{flex:0 0 14px;font-size:var(--fs-sm);color:var(--text-tertiary);transition:transform .18s}
+
+/* Col 1 — drag + chevron */
+.pr-col-ctrl{display:flex;align-items:center;gap:2px;padding:0 4px}
+.pr-chevron{font-size:var(--fs-sm);color:var(--text-tertiary);transition:transform .18s;flex-shrink:0}
 .pr-chevron.open{transform:rotate(90deg)}
 
-/* Bloc identity : flex:1, contient nameline en ligne */
-.pr-identity{flex:1;min-width:0;overflow:hidden}
-/* Nameline = num + nom + barre sur la même ligne */
-.pr-nameline{display:flex;align-items:center;gap:10px;min-width:0}
-.proj-num{font-size:var(--fs-xxxs);font-weight:500;color:var(--text-tertiary);font-family:var(--font-mono);flex-shrink:0}
-.proj-name{font-size:.95rem;font-weight:600;color:var(--text-primary);white-space:nowrap;flex-shrink:0;max-width:340px;overflow:hidden;text-overflow:ellipsis}
+/* Col 2 — numéro + nom */
+.pr-col-name{display:flex;flex-direction:column;justify-content:center;gap:1px;padding:10px 12px 10px 4px;min-width:0;overflow:hidden}
+.proj-num{font-size:var(--fs-xxxs);font-weight:500;color:var(--text-tertiary);font-family:var(--font-mono)}
+.proj-name{font-size:.9rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* Barre statut — flex:1, prend tout l'espace restant dans la nameline */
-.pr-status-block{flex:1;min-width:120px;cursor:pointer;transition:opacity .12s}
-.pr-status-block:hover{opacity:.85}
+/* Col 3 — barre de progression */
+.pr-col-bar{padding:0 8px;cursor:pointer;transition:opacity .12s}
+.pr-col-bar:hover{opacity:.85}
 
-/* Bloc droite : meta chips + imp dot + boutons */
-.pr-right{flex:0 0 auto;display:flex;align-items:center;gap:6px;margin-left:8px}
-.pr-meta-chips{display:flex;align-items:center;gap:5px;flex-wrap:nowrap}
-.proj-meta-tags{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+/* Col 4 — meta : éditeur, client, dates */
+.pr-col-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:0 8px}
+.proj-meta-tags{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+
+/* Col 5 — actions */
+.pr-col-actions{display:flex;align-items:center;gap:4px;padding:0 0 0 4px}
 .tag-chip{font-size:var(--fs-xxxs);color:var(--text-secondary);display:inline-flex;align-items:center;gap:2px;white-space:nowrap}
 .tag-chip.dl-warn{color:var(--dl-warn);font-weight:500}.tag-chip.dl-over{color:var(--dl-over);font-weight:500}
 .imp-dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
 .imp-low{background:var(--imp-low)}.imp-med{background:var(--imp-med)}.imp-high{background:var(--imp-high)}
 
-/* Status bar — projets via .pr-status-block, sous-projets via .sub-status-block */
-.pr-status-block{width:100%;cursor:pointer;transition:opacity .12s}
-.pr-status-block:hover{opacity:.8}
-.sub-status-block{flex:0 0 auto;width:130px;cursor:pointer;transition:opacity .12s}
-.sub-status-block:hover{opacity:.8}
+/* .pr-status-block — gardé pour compatibilité sous-projets */
+/* sub-status-block — remplacé par sub-col-bar */
 .prog-wrap{width:100%}
-.prog-bar-bg{position:relative;height:30px;border-radius:var(--radius-sm);background:var(--bg-hover);overflow:hidden;display:flex;align-items:center}
+.prog-bar-bg{position:relative;height:28px;border-radius:var(--radius-sm);background:var(--bg-hover);overflow:hidden;display:flex;align-items:center}
 .sub-status-block .prog-bar-bg{height:22px}
 .prog-fill-bg{position:absolute;inset:0;height:100%;border-radius:var(--radius-sm);transition:width .4s ease}
-.prog-label{position:relative;z-index:1;font-size:var(--fs-xxs);font-weight:700;letter-spacing:.02em;white-space:nowrap;padding:0 10px}
+.prog-label{position:relative;z-index:1;font-size:var(--fs-xs);font-weight:700;letter-spacing:.02em;white-space:nowrap;padding:0 12px}
 /* Garder status-badge pour le dashboard et dropdowns */
 .status-badge{font-size:var(--fs-xxs);font-weight:600;padding:3px 9px;border-radius:10px;white-space:nowrap;display:inline-block;cursor:pointer;transition:opacity .12s}
 .status-badge:hover{opacity:.75}
@@ -178,7 +179,7 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .s-hold{background:var(--s-hold-bg);color:var(--s-hold-fg)}
 
 /* Actions block */
-.pr-actions{flex:0 0 auto;display:flex;align-items:center;gap:4px;margin-left:4px}
+.pr-actions{flex:0 0 auto;display:flex;align-items:center;gap:4px}
 .btn-edit-main{height:30px;padding:0 12px;font-size:var(--fs-xs);background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:var(--radius-md);cursor:pointer;font-weight:600;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;transition:background .15s,color .15s,opacity .15s;opacity:0;pointer-events:none}
 .btn-edit-main:hover{background:var(--accent);color:#fff}
 .proj-card:hover .btn-edit-main,.proj-card.expanded .btn-edit-main{opacity:1;pointer-events:auto}
@@ -203,19 +204,23 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .section-hdr{font-size:var(--fs-xxxs);font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;display:flex;align-items:center;justify-content:space-between}
 
 /* Sub card — same logic as project card but indented */
-.sub-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:4px;overflow:visible;transition:box-shadow .12s}
+.sub-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:4px;overflow:hidden;transition:box-shadow .12s}
 .sub-card:hover{box-shadow:var(--shadow-sm)}
-.sub-row{display:flex;align-items:center;gap:7px;padding:7px 10px;cursor:default;min-width:0}
-.sub-drag-handle{flex:0 0 12px;color:var(--text-tertiary);cursor:grab;font-size:.8rem;display:flex;align-items:center;opacity:0;transition:opacity .15s}
+/* Grid 5 colonnes — alignées avec .pr-row */
+.sub-row{display:grid;grid-template-columns:36px minmax(160px,1fr) minmax(140px,2fr) minmax(120px,1.5fr) auto;align-items:center;padding:0 8px 0 4px;cursor:pointer;min-height:38px;gap:0}
+.sub-row:hover{background:var(--bg-hover)}
+.sub-col-ctrl{display:flex;align-items:center;gap:2px;padding:0 2px}
+.sub-drag-handle{color:var(--text-tertiary);cursor:grab;font-size:.8rem;display:flex;align-items:center;opacity:0;transition:opacity .15s}
 .sub-row:hover .sub-drag-handle{opacity:1}
-.sub-chevron{flex:0 0 14px;font-size:.75rem;color:var(--text-tertiary);transition:transform .18s;cursor:pointer}
+.sub-chevron{font-size:.75rem;color:var(--text-tertiary);transition:transform .18s}
 .sub-chevron.open{transform:rotate(90deg)}
-.sub-identity{flex:1;min-width:0;overflow:hidden;cursor:pointer}
+.sub-col-name{display:flex;flex-direction:column;justify-content:center;gap:1px;padding:8px 12px 8px 4px;min-width:0;overflow:hidden}
 .sub-num{font-size:var(--fs-xxxs);font-family:var(--font-mono);color:var(--text-tertiary)}
 .sub-name{font-size:var(--fs-sm);font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sub-meta-tags{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:1px}
-/* sub-status-block défini avec pr-status-block ci-dessus */
-.sub-actions{flex:0 0 auto;display:flex;align-items:center;gap:3px}
+.sub-col-bar{padding:0 8px;cursor:pointer;transition:opacity .12s}
+.sub-col-bar:hover{opacity:.85}
+.sub-col-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:0 8px}
+.sub-col-actions{display:flex;align-items:center;gap:3px;padding:0 0 0 4px}
 .btn-edit-sub{height:26px;padding:0 8px;font-size:var(--fs-xxs);background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:var(--radius-sm);cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;transition:background .15s,opacity .15s;opacity:0;pointer-events:none}
 .btn-edit-sub:hover{background:var(--accent);color:#fff}
 .sub-card:hover .btn-edit-sub{opacity:1;pointer-events:auto}
@@ -341,7 +346,7 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:28px
 /* Tablet */
 @media(max-width:900px){
   :root{--sidebar-w:148px}
-  .logo-tagline{display:none}.pr-status-block{width:120px}.sub-status-block{width:100px}
+  .logo-tagline{display:none}.pr-row{grid-template-columns:36px minmax(140px,1fr) minmax(130px,2fr) 0 auto}.pr-col-meta{display:none}.sub-row{grid-template-columns:36px minmax(130px,1fr) minmax(120px,2fr) 0 auto}.sub-col-meta{display:none}
 }
 /* Mobile */
 @media(max-width:640px){
@@ -353,7 +358,7 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:28px
   .btn-label{display:none}#btn-new{width:30px;padding:0;justify-content:center}
   #bottom-nav{display:flex}
   #project-list{padding-bottom:calc(var(--bottomnav-h) + 8px)}
-  .pr-status-block{width:100px}.sub-status-block{width:80px}
+  .pr-row{grid-template-columns:30px 1fr minmax(110px,1.5fr) 0 auto}.sub-row{grid-template-columns:30px 1fr minmax(100px,1.5fr) 0 auto}
   .btn-edit-main span{display:none}
   .resizable-modal{max-width:100%;max-height:100vh;border-radius:var(--radius-lg) var(--radius-lg) 0 0;position:fixed;bottom:0;left:0;right:0;margin:0;resize:none}
   #modal-overlay{align-items:flex-end;padding:0}
