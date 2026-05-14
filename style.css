@@ -161,6 +161,7 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .s-done{background:var(--s-done-bg);color:var(--s-done-fg)}
 .s-hold{background:var(--s-hold-bg);color:var(--s-hold-fg)}
 .pr-prog-bar{width:130px;display:flex;align-items:center;gap:5px}
+.prog-wrap{display:flex;align-items:center;gap:5px;width:100%}
 .prog-bar{flex:1;background:var(--bg-hover);border-radius:4px;overflow:hidden}
 .prog-fill{height:100%;border-radius:4px;transition:width .35s}
 .prog-pct{font-size:var(--fs-xxxs);color:var(--text-secondary);min-width:26px;text-align:right;font-family:var(--font-mono)}
