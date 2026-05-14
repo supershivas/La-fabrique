@@ -54,7 +54,8 @@ function sv(id,v){if(g(id))g(id).value=v??'';}
 /* ── Progress bar ── */
 function pb(pct,status,h='5px'){
   const c=status==='done'||pct>=100?'#639922':PROG_COLOR[status]||'#888';
-  return`<div class="prog-wrap"><div class="prog-bar" style="height:${h}"><div class="prog-fill" style="width:${pct}%;background:${c}"></div></div><span class="prog-pct">${pct}%</span></div>`;
+  const label=STATUS_LABELS[status]||status;
+  return`<div class="prog-wrap"><div class="prog-bar-bg"><div class="prog-fill-bg" style="width:${pct}%;background:${c}"></div><span class="prog-label">${label}</span></div></div>`;
 }
 
 /* ── Order ── */
@@ -460,9 +461,8 @@ function buildProjectCard(p,draggable=false){
         <div class="proj-name">${p.name}</div>
         <div class="proj-meta-tags">${metaTags}</div>
       </div>
-      <div class="pr-status-block">
-        <span class="status-badge ${STATUS_CLASS[p.status]}" data-action="inline-status" data-pid="${p.id}">${STATUS_LABELS[p.status]}</span>
-        <div class="pr-prog-bar">${pb(p.progress,p.status,'6px')}</div>
+      <div class="pr-status-block" data-action="inline-status" data-pid="${p.id}">
+        ${pb(p.progress,p.status)}
       </div>
       <div class="pr-actions" onclick="event.stopPropagation()">
         <button class="btn-edit-main" data-action="edit-proj" data-pid="${p.id}">
@@ -499,9 +499,8 @@ function buildSubCard(s,parent){
         <div class="sub-num">${s.number}</div>
         <div class="sub-name">${s.name}</div>
       </div>
-      <div class="sub-status-block">
-        <span class="status-badge ${STATUS_CLASS[s.status]}" data-action="inline-status-sub" data-pid="${parent.id}" data-sid="${s.id}">${STATUS_LABELS[s.status]}</span>
-        <div class="sub-prog">${pb(s.progress,s.status,'5px')}</div>
+      <div class="sub-status-block" data-action="inline-status-sub" data-pid="${parent.id}" data-sid="${s.id}">
+        ${pb(s.progress,s.status)}
       </div>
       <div class="sub-actions" onclick="event.stopPropagation()">
         <button class="btn-edit-sub" data-action="edit-sub" data-pid="${parent.id}" data-sid="${s.id}">
