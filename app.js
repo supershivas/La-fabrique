@@ -454,19 +454,21 @@ function buildProjectCard(p,draggable=false){
 
   return`<div class="proj-card ${open?'expanded':''}" data-pid="${p.id}" ${draggable?'draggable="true"':''}>
     <div class="pr-row" data-action="toggle" data-pid="${p.id}">
-      ${dragHandle}
-      <i class="ti ti-chevron-right pr-chevron ${open?'open':''}"></i>
-      <div class="pr-identity">
-        <div class="pr-nameline">
-          <span class="proj-num">${p.number}</span>
-          <span class="proj-name">${p.name}</span>
-          <div class="pr-status-block" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()">
-            ${pb(p.progress,p.status)}
-          </div>
-        </div>
+      <div class="pr-col-ctrl">
+        ${dragHandle}
+        <i class="ti ti-chevron-right pr-chevron ${open?'open':''}"></i>
       </div>
-      <div class="pr-right" onclick="event.stopPropagation()">
-        <div class="pr-meta-chips">${metaTags}</div>
+      <div class="pr-col-name">
+        <span class="proj-num">${p.number}</span>
+        <span class="proj-name">${p.name}</span>
+      </div>
+      <div class="pr-col-bar" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()">
+        ${pb(p.progress,p.status)}
+      </div>
+      <div class="pr-col-meta">
+        ${metaTags}
+      </div>
+      <div class="pr-col-actions" onclick="event.stopPropagation()">
         <span class="imp-dot ${IMP_DOT[p.importance]}" title="${IMP_LBL[p.importance]}"></span>
         <button class="btn-edit-main" data-action="edit-proj" data-pid="${p.id}">
           <i class="ti ti-edit"></i><span>Modifier</span>
@@ -495,17 +497,23 @@ function buildSubCard(s,parent){
   }
 
   return`<div class="sub-card" draggable="true" data-sid="${s.id}" data-pid="${parent.id}">
-    <div class="sub-row">
-      <div class="sub-drag-handle"><i class="ti ti-grip-vertical"></i></div>
-      <i class="ti ti-chevron-right sub-chevron ${open?'open':''}" data-action="toggle-sub" data-pid="${parent.id}" data-sid="${s.id}"></i>
-      <div class="sub-identity" data-action="toggle-sub" data-pid="${parent.id}" data-sid="${s.id}">
-        <div class="sub-num">${s.number}</div>
-        <div class="sub-name">${s.name}</div>
+    <div class="sub-row" data-action="toggle-sub" data-pid="${parent.id}" data-sid="${s.id}">
+      <div class="sub-col-ctrl">
+        <div class="sub-drag-handle"><i class="ti ti-grip-vertical"></i></div>
+        <i class="ti ti-chevron-right sub-chevron ${open?'open':''}"></i>
       </div>
-      <div class="sub-status-block" data-action="inline-status-sub" data-pid="${parent.id}" data-sid="${s.id}">
+      <div class="sub-col-name">
+        <span class="sub-num">${s.number}</span>
+        <span class="sub-name">${s.name}</span>
+      </div>
+      <div class="sub-col-bar" data-action="inline-status-sub" data-pid="${parent.id}" data-sid="${s.id}" onclick="event.stopPropagation()">
         ${pb(s.progress,s.status)}
       </div>
-      <div class="sub-actions" onclick="event.stopPropagation()">
+      <div class="sub-col-meta">
+        ${s.deadline?`<span class="tag-chip ${dlClass}">☠ ${toEU(s.deadline)}</span>`:''}
+        ${s.ended?`<span class="tag-chip" style="color:var(--s-done-fg)">✓ ${toEU(s.ended)}</span>`:''}
+      </div>
+      <div class="sub-col-actions" onclick="event.stopPropagation()">
         <button class="btn-edit-sub" data-action="edit-sub" data-pid="${parent.id}" data-sid="${s.id}">
           <i class="ti ti-edit"></i>
         </button>
