@@ -413,7 +413,7 @@ function buildMetaTags(p){
   const dls=dlStatus(p.deadline),dlClass=dls==='over'?'dl-over':dls==='warn'?'dl-warn':'';
   const clients=p.client?p.client.split(',').map(s=>s.trim()).filter(Boolean):[];
   return[
-    `<span class="imp-dot ${IMP_DOT[p.importance]}" title="${IMP_LBL[p.importance]}"></span>`,
+    '',
     p.editor?`<span class="tag-chip"><i class="ti ti-building" style="font-size:.6rem"></i>${p.editor}</span>`:'',
     clients.map(c=>`<span class="tag-chip"><i class="ti ti-user" style="font-size:.6rem"></i>${c}</span>`).join(''),
     p.date?`<span class="tag-chip"><i class="ti ti-calendar" style="font-size:.6rem"></i>${toEU(p.date)}</span>`:'',
@@ -457,14 +457,14 @@ function buildProjectCard(p,draggable=false){
       ${dragHandle}
       <i class="ti ti-chevron-right pr-chevron ${open?'open':''}"></i>
       <div class="pr-identity">
-        <div class="proj-num">${p.number}</div>
-        <div class="proj-name">${p.name}</div>
+        <div class="proj-nameline"><span class="proj-num">${p.number}</span><span class="proj-name">${p.name}</span></div>
+        <div class="pr-status-block" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()">
+          ${pb(p.progress,p.status)}
+        </div>
         <div class="proj-meta-tags">${metaTags}</div>
       </div>
-      <div class="pr-status-block" data-action="inline-status" data-pid="${p.id}">
-        ${pb(p.progress,p.status)}
-      </div>
       <div class="pr-actions" onclick="event.stopPropagation()">
+        <span class="imp-dot ${IMP_DOT[p.importance]}" title="${IMP_LBL[p.importance]}"></span>
         <button class="btn-edit-main" data-action="edit-proj" data-pid="${p.id}">
           <i class="ti ti-edit"></i><span>Modifier</span>
         </button>
