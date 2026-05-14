@@ -675,28 +675,37 @@ function openEdit(id){
   g('prog-hint').textContent='Valeur personnalisée';openModal('Modifier le projet','ti-edit');
 }
 
+/* ── Note modal dédié ── */
+let _noteCb=null;
+function openNoteModal(title,cb){
+  g('note-modal-title').innerHTML=`<i class="ti ti-notes"></i>${title}`;
+  g('note-modal-text').value='';
+  g('note-overlay').classList.add('open');
+  setTimeout(()=>g('note-modal-text').focus(),50);
+  _noteCb=cb;
+}
+function closeNoteModal(){g('note-overlay').classList.remove('open');_noteCb=null;}
+
 function openAddNote(id){
-  resetModal();addingNoteTo=id;sliderManual=true;
   const p=projects.find(x=>x.id===id);if(!p)return;
-  sv('f-num',p.number);sv('f-name',p.name);g('f-num').disabled=true;g('f-name').disabled=true;
-  g('f-status-m').value=p.status;g('f-progress').value=p.progress;g('f-progress-val').textContent=`${p.progress}%`;
-  if(p.progress===100||p.status==='done')g('f-progress').style.accentColor='#639922';
-  sv('f-deadline',toEU(p.deadline));g('f-cat').value=p.cat;
-  // Hide editor/client/date fields
-  g('f-editor')?.closest('.form-row')&&(g('f-editor').closest('.form-row').style.display='none');
-  g('f-date')?.closest('.form-row')&&(g('f-date').closest('.form-row').style.display='none');
-  g('note-label').textContent='Nouvelle note';g('f-note').placeholder="Décris l'avancement…";
-  g('prog-hint').textContent='Valeur personnalisée';openModal(`Note — ${p.number}`,'ti-notes');
+  openNoteModal(`${p.number} — ${p.name}`,async()=>{
+    const text=g('note-modal-text').value.trim();if(!text)return;
+    const now=todayISO();
+    const nd=await saveNote(p.id,text);
+    if(nd){p.notes.push({id:nd.id,date:now,text});toast('Note ajoutée ✓');}
+    closeNoteModal();renderProjects();
+  });
 }
 
 function openAddSubNote(parentId,subId){
-  resetModal();addingNoteToSub={parentId,subId};
   const parent=projects.find(x=>x.id===parentId);const s=parent?.subprojects.find(x=>x.id===subId);if(!s)return;
-  g('note-label').textContent=`Note — ${s.number}`;g('f-note').placeholder='Note sur ce sous-projet…';
-  // Hide all except note field
-  g('modal')?.querySelectorAll('.fg,.form-row').forEach(el=>{if(!el.contains(g('note-field-wrap'))&&el!==g('note-field-wrap'))el.style.display='none';});
-  g('note-field-wrap').style.display='block';
-  openModal(`Note — ${s.number}`,'ti-notes');
+  openNoteModal(`${s.number} — ${s.name}`,async()=>{
+    const text=g('note-modal-text').value.trim();if(!text)return;
+    const now=todayISO();
+    const nd=await saveNote(parentId,text,subId);
+    if(nd){s.notes.push({id:nd.id,date:now,text});toast('Note ajoutée ✓');}
+    closeNoteModal();renderProjects();
+  });
 }
 
 function openNewSub(parentId){
@@ -866,6 +875,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   g('btn-cancel')?.addEventListener('click',closeModal);
   g('btn-save')?.addEventListener('click',handleSave);
   g('modal-overlay')?.addEventListener('click',e=>{if(e.target===g('modal-overlay'))closeModal();});
+  g('note-btn-cancel')?.addEventListener('click',closeNoteModal);
+  g('note-btn-save')?.addEventListener('click',()=>{if(_noteCb)_noteCb();});
+  g('note-overlay')?.addEventListener('click',e=>{if(e.target===g('note-overlay'))closeNoteModal();});
+  g('note-modal-text')?.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();if(_noteCb)_noteCb();}});
 
   g('f-status-m')?.addEventListener('change',function(){sliderManual=false;syncSlider(this.value);});
   g('f-progress')?.addEventListener('input',function(){
