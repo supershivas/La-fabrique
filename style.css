@@ -151,7 +151,17 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .imp-low{background:var(--imp-low)}.imp-med{background:var(--imp-med)}.imp-high{background:var(--imp-high)}
 
 /* Status + progress block — prominent, sits right after identity */
-.pr-status-block{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:130px}
+/* Status bar — grande barre avec label intégré */
+.pr-status-block{flex:0 0 auto;width:150px;cursor:pointer;transition:opacity .12s}
+.pr-status-block:hover{opacity:.8}
+.sub-status-block{flex:0 0 auto;width:130px;cursor:pointer;transition:opacity .12s}
+.sub-status-block:hover{opacity:.8}
+.prog-wrap{width:100%}
+.prog-bar-bg{position:relative;height:32px;border-radius:var(--radius-md);background:var(--bg-hover);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.sub-status-block .prog-bar-bg{height:26px}
+.prog-fill-bg{position:absolute;inset:0;height:100%;border-radius:var(--radius-md);transition:width .35s}
+.prog-label{position:relative;z-index:1;font-size:var(--fs-xxs);font-weight:700;letter-spacing:.02em;white-space:nowrap}
+/* Garder status-badge pour le dashboard et dropdowns */
 .status-badge{font-size:var(--fs-xxs);font-weight:600;padding:3px 9px;border-radius:10px;white-space:nowrap;display:inline-block;cursor:pointer;transition:opacity .12s}
 .status-badge:hover{opacity:.75}
 .s-ready{background:var(--s-ready-bg);color:var(--s-ready-fg)}
@@ -160,11 +170,6 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .s-sent{background:var(--s-sent-bg);color:var(--s-sent-fg)}
 .s-done{background:var(--s-done-bg);color:var(--s-done-fg)}
 .s-hold{background:var(--s-hold-bg);color:var(--s-hold-fg)}
-.pr-prog-bar{width:130px;display:flex;align-items:center;gap:5px}
-.prog-wrap{display:flex;align-items:center;gap:5px;width:100%}
-.prog-bar{flex:1;background:var(--bg-hover);border-radius:4px;overflow:hidden}
-.prog-fill{height:100%;border-radius:4px;transition:width .35s}
-.prog-pct{font-size:var(--fs-xxxs);color:var(--text-secondary);min-width:26px;text-align:right;font-family:var(--font-mono)}
 
 /* Actions block */
 .pr-actions{flex:0 0 auto;display:flex;align-items:center;gap:4px;margin-left:4px}
@@ -202,8 +207,7 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .sub-num{font-size:var(--fs-xxxs);font-family:var(--font-mono);color:var(--text-tertiary)}
 .sub-name{font-size:var(--fs-sm);font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sub-meta-tags{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:1px}
-.sub-status-block{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px;min-width:110px}
-.sub-prog{width:110px;display:flex;align-items:center;gap:4px}
+/* sub-status-block défini avec pr-status-block ci-dessus */
 .sub-actions{flex:0 0 auto;display:flex;align-items:center;gap:3px}
 .btn-edit-sub{height:26px;padding:0 8px;font-size:var(--fs-xxs);background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:var(--radius-sm);cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;transition:background .15s}
 .btn-edit-sub:hover{background:var(--accent);color:#fff}
@@ -329,7 +333,7 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:28px
 /* Tablet */
 @media(max-width:900px){
   :root{--sidebar-w:148px}
-  .logo-tagline{display:none}.pr-status-block{min-width:110px}.pr-prog-bar{width:110px}
+  .logo-tagline{display:none}.pr-status-block{width:120px}.sub-status-block{width:100px}
 }
 /* Mobile */
 @media(max-width:640px){
@@ -341,7 +345,7 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:28px
   .btn-label{display:none}#btn-new{width:30px;padding:0;justify-content:center}
   #bottom-nav{display:flex}
   #project-list{padding-bottom:calc(var(--bottomnav-h) + 8px)}
-  .pr-status-block{min-width:90px}.pr-prog-bar{width:90px}
+  .pr-status-block{width:100px}.sub-status-block{width:80px}
   .btn-edit-main span{display:none}
   .resizable-modal{max-width:100%;max-height:100vh;border-radius:var(--radius-lg) var(--radius-lg) 0 0;position:fixed;bottom:0;left:0;right:0;margin:0;resize:none}
   #modal-overlay{align-items:flex-end;padding:0}
