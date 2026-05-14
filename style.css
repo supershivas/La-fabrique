@@ -127,23 +127,22 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .empty-state p{font-size:var(--fs-sm)}
 .loading-state{text-align:center;padding:40px;color:var(--text-tertiary);font-size:var(--fs-sm);display:flex;align-items:center;justify-content:center;gap:8px}
 
-.proj-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:6px;overflow:visible;transition:box-shadow .15s,background .2s,border-color .2s}
+.proj-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:6px;overflow:hidden;transition:box-shadow .15s,background .2s,border-color .2s}
 .proj-card:hover{box-shadow:var(--shadow-sm)}
+.proj-card-inner{padding:9px 12px 0;display:flex;flex-direction:column;gap:0}
+.proj-card.expanded .proj-card-inner{border-radius:var(--radius-lg) var(--radius-lg) 0 0}
 
-/* Main row — info + status together, then actions */
-.proj-row{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;transition:background .12s;min-width:0;border-radius:var(--radius-lg)}
-.proj-row:hover{background:var(--bg-hover)}
-.proj-card.expanded > .proj-row{border-radius:var(--radius-lg) var(--radius-lg) 0 0}
-
-.pr-chevron{flex:0 0 16px;font-size:var(--fs-sm);color:var(--text-tertiary);transition:transform .18s}
+/* Ligne du haut : chevron + nom + actions */
+.proj-toprow{display:flex;align-items:center;gap:7px;cursor:pointer;min-width:0;padding-bottom:7px}
+.proj-toprow:hover .proj-name{color:var(--accent)}
+.pr-chevron{flex:0 0 14px;font-size:var(--fs-sm);color:var(--text-tertiary);transition:transform .18s}
 .pr-chevron.open{transform:rotate(90deg)}
-
-/* Identity block — flex column, contient nameline + barre + meta */
-.proj-nameline{display:flex;align-items:baseline;gap:8px;min-width:0}
+.proj-nameline{flex:1;display:flex;align-items:baseline;gap:7px;min-width:0;overflow:hidden}
 .proj-num{font-size:var(--fs-xxxs);font-weight:500;color:var(--text-tertiary);font-family:var(--font-mono);flex-shrink:0}
-.proj-name{font-size:.95rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proj-name{font-size:.95rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .12s}
 
-/* Meta tags row (clients, editor, dates, deadline, importance) */
+/* Meta tags row */
+.proj-metatow{padding:5px 0 8px}
 .proj-meta-tags{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .tag-chip{font-size:var(--fs-xxxs);color:var(--text-secondary);display:inline-flex;align-items:center;gap:2px;white-space:nowrap}
 .tag-chip.dl-warn{color:var(--dl-warn);font-weight:500}.tag-chip.dl-over{color:var(--dl-over);font-weight:500}
@@ -152,16 +151,15 @@ input:disabled{opacity:.5;cursor:not-allowed}
 
 /* Status + progress block — prominent, sits right after identity */
 /* Status bar — grande barre avec label intégré */
-.pr-identity{flex:1;min-width:0;overflow:hidden;display:flex;flex-direction:column;gap:3px}
 .pr-status-block{width:100%;cursor:pointer;transition:opacity .12s}
 .pr-status-block:hover{opacity:.8}
 .sub-status-block{flex:0 0 auto;width:130px;cursor:pointer;transition:opacity .12s}
 .sub-status-block:hover{opacity:.8}
 .prog-wrap{width:100%}
-.prog-bar-bg{position:relative;height:20px;border-radius:var(--radius-sm);background:var(--bg-hover);overflow:hidden;display:flex;align-items:center}
-.sub-status-block .prog-bar-bg{height:18px}
+.prog-bar-bg{position:relative;height:24px;border-radius:var(--radius-sm);background:var(--bg-hover);overflow:hidden;display:flex;align-items:center}
+.sub-status-block .prog-bar-bg{height:20px}
 .prog-fill-bg{position:absolute;inset:0;height:100%;border-radius:var(--radius-sm);transition:width .35s}
-.prog-label{position:relative;z-index:1;font-size:var(--fs-xxs);font-weight:700;letter-spacing:.02em;white-space:nowrap;padding:0 8px}
+.prog-label{position:relative;z-index:1;font-size:var(--fs-xxs);font-weight:700;letter-spacing:.02em;white-space:nowrap;padding:0 10px}
 /* Garder status-badge pour le dashboard et dropdowns */
 .status-badge{font-size:var(--fs-xxs);font-weight:600;padding:3px 9px;border-radius:10px;white-space:nowrap;display:inline-block;cursor:pointer;transition:opacity .12s}
 .status-badge:hover{opacity:.75}
@@ -325,7 +323,7 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:28px
 
 /* Drag & drop projects */
 .drag-handle{flex:0 0 14px;color:var(--text-tertiary);cursor:grab;font-size:.9rem;display:flex;align-items:center;opacity:0;transition:opacity .15s}
-.proj-row:hover .drag-handle{opacity:1}
+.proj-toprow:hover .drag-handle{opacity:1}
 .proj-card.dragging{opacity:.45;border:1.5px dashed var(--border-md)!important}
 .proj-card.drag-over{border-color:var(--accent)!important;box-shadow:0 0 0 2px var(--accent-light)!important}
 
