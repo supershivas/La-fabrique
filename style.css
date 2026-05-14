@@ -166,7 +166,7 @@ input:disabled{opacity:.5;cursor:not-allowed}
 /* .pr-status-block — gardé pour compatibilité sous-projets */
 /* sub-status-block — remplacé par sub-col-bar */
 .prog-wrap{width:100%}
-.prog-bar-bg{position:relative;height:28px;border-radius:var(--radius-sm);background:var(--bg-hover);overflow:hidden;display:flex;align-items:center}
+.prog-bar-bg{position:relative;width:100%;height:28px;border-radius:var(--radius-sm);background:var(--bg-hover);overflow:hidden;display:flex;align-items:center}
 .sub-status-block .prog-bar-bg{height:22px}
 .prog-fill-bg{position:absolute;inset:0;height:100%;border-radius:var(--radius-sm);transition:width .4s ease;opacity:.35}
 .prog-label{position:relative;z-index:1;font-size:var(--fs-xs);font-weight:700;letter-spacing:.02em;white-space:nowrap;padding:0 12px}
