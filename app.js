@@ -453,14 +453,20 @@ function buildProjectCard(p,draggable=false){
   }
 
   return`<div class="proj-card ${open?'expanded':''}" data-pid="${p.id}" ${draggable?'draggable="true"':''}>
-    <div class="pc-toprow" data-action="toggle" data-pid="${p.id}">
+    <div class="pr-row" data-action="toggle" data-pid="${p.id}">
       ${dragHandle}
       <i class="ti ti-chevron-right pr-chevron ${open?'open':''}"></i>
-      <div class="pc-nameline">
-        <span class="proj-num">${p.number}</span>
-        <span class="proj-name">${p.name}</span>
+      <div class="pr-identity">
+        <div class="pr-nameline">
+          <span class="proj-num">${p.number}</span>
+          <span class="proj-name">${p.name}</span>
+        </div>
+        <div class="pr-status-block" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()">
+          ${pb(p.progress,p.status)}
+        </div>
       </div>
-      <div class="pr-actions" onclick="event.stopPropagation()">
+      <div class="pr-right" onclick="event.stopPropagation()">
+        <div class="pr-meta-chips">${metaTags}</div>
         <span class="imp-dot ${IMP_DOT[p.importance]}" title="${IMP_LBL[p.importance]}"></span>
         <button class="btn-edit-main" data-action="edit-proj" data-pid="${p.id}">
           <i class="ti ti-edit"></i><span>Modifier</span>
@@ -469,12 +475,6 @@ function buildProjectCard(p,draggable=false){
           <i class="ti ti-dots-vertical"></i>
         </button>
       </div>
-    </div>
-    <div class="pc-statusbar" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()">
-      ${pb(p.progress,p.status)}
-    </div>
-    <div class="pc-meta">
-      <div class="proj-meta-tags">${metaTags}</div>
     </div>
     ${expandedSection}
   </div>`;
