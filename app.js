@@ -939,8 +939,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   g('btn-save')?.addEventListener('click',handleSave);
   g('modal-overlay')?.addEventListener('click',e=>{if(e.target===g('modal-overlay'))closeModal();});
   g('note-btn-cancel')?.addEventListener('click',closeNoteModal);
-  g('confirm-cancel')?.addEventListener('click',closeConfirm);
-  g('confirm-ok')?.addEventListener('click',async()=>{if(_confirmCb)await _confirmCb();closeConfirm();});
+  g('confirm-cancel')?.addEventListener('click',e=>{e.stopPropagation();closeConfirm();});
+  g('confirm-ok')?.addEventListener('click',async e=>{e.stopPropagation();const cb=_confirmCb;closeConfirm();if(cb)await cb();});
   g('confirm-overlay')?.addEventListener('click',e=>{if(e.target===g('confirm-overlay'))closeConfirm();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&g('confirm-overlay')?.classList.contains('open'))closeConfirm();});
   g('note-btn-save')?.addEventListener('click',()=>{if(_noteCb)_noteCb();});
