@@ -670,8 +670,8 @@ function openEdit(id){
   g('f-status-m').value=p.status;g('f-imp').value=p.importance||'medium';
   g('f-progress').value=p.progress;g('f-progress-val').textContent=`${p.progress}%`;
   if(p.progress===100||p.status==='done')g('f-progress').style.accentColor='#639922';
-  sv('f-date',toEU(p.date));sv('f-deadline',toEU(p.deadline));g('f-cat').value=p.cat;
-  g('note-label').textContent='Nouvelle note (optionnel)';g('f-note').placeholder='Laisser vide pour ne pas ajouter…';
+   sv('f-date',p.date||'');sv('f-deadline',p.deadline||'');
+   g('note-label').textContent='Nouvelle note (optionnel)';g('f-note').placeholder='Laisser vide pour ne pas ajouter…';
   g('prog-hint').textContent='Valeur personnalisée';openModal('Modifier le projet','ti-edit');
 }
 
@@ -732,7 +732,7 @@ function openEditSub(parentId,subId){
 async function handleSave(){
   const num=gv('f-num'),name=gv('f-name'),status=g('f-status-m').value;
   let progress=parseInt(g('f-progress').value)||0;if(status==='done')progress=100;
-  const deadline=fromEU(gv('f-deadline')),date=fromEU(gv('f-date'));
+  const deadline=gv('f-deadline'),date=gv('f-date');
   const noteText=gv('f-note'),editor=gv('f-editor'),client=gv('f-client');
   const importance=g('f-imp').value,cat=g('f-cat').value,now=todayISO();
   g('btn-save').disabled=true;g('btn-save').textContent='Enregistrement…';
