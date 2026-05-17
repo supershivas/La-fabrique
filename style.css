@@ -378,3 +378,18 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:28px
   .shortcuts-grid{grid-template-columns:1fr}
   .dash-sm{flex:1 1 140px}.dash-wide{min-width:100%}
 }
+
+/* ── Confirm modal ── */
+#confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1200;align-items:center;justify-content:center;padding:16px}
+#confirm-overlay.open{display:flex}
+#confirm-box{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px 20px;width:100%;max-width:360px;box-shadow:var(--shadow-md);animation:fadeIn .15s ease}
+#confirm-icon{font-size:1.5rem;color:var(--s-sent-fg);margin-bottom:10px;text-align:center}
+#confirm-title{font-size:var(--fs-sm);font-weight:600;color:var(--text-primary);margin-bottom:6px;text-align:center}
+#confirm-msg{font-size:var(--fs-xs);color:var(--text-secondary);text-align:center;margin-bottom:4px;line-height:1.5}
+.btn-danger{display:inline-flex;align-items:center;gap:5px;padding:0 14px;height:34px;border-radius:var(--radius-md);background:var(--s-sent-bg);color:var(--s-sent-fg);font-size:var(--fs-xs);font-weight:600;border:1px solid transparent;cursor:pointer}
+.btn-danger:hover{filter:brightness(1.1)}
+
+/* ── Field validation ── */
+.fg input.field-error,.fg select.field-error{border-color:var(--s-sent-fg)!important;outline:1px solid var(--s-sent-fg)}
+.field-error-msg{font-size:var(--fs-xxxs);color:var(--s-sent-fg);margin-top:3px;display:none}
+.field-error-msg.visible{display:block}
