@@ -64,7 +64,16 @@ function getOrderedList(list){
   const order=manualOrder[orderKey()];if(!order)return list;
   return[...order.map(id=>list.find(p=>p.id===id)).filter(Boolean),...list.filter(p=>!order.includes(p.id))];
 }
-function saveOrder(list){manualOrder[orderKey()]=list.map(p=>p.id);try{localStorage.setItem('lf_order',JSON.stringify(manualOrder));}catch(_){}}
+function saveOrder(list){
+  manualOrder[orderKey()]=list.map(p=>p.id);
+  try{localStorage.setItem('lf_order',JSON.stringify(manualOrder));}catch(_){}
+  // Persist to Supabase: update sort_order on each project
+  if(currentUser){
+    list.forEach((p,i)=>{
+      db.from('projects').update({sort_order:i,updated_at:new Date().toISOString()}).eq('id',p.id).then(()=>{});
+    });
+  }
+}
 function loadOrder(){try{const r=localStorage.getItem('lf_order');if(r)manualOrder=JSON.parse(r);}catch(_){}}
 
 /* ── Prefs ── */
@@ -242,7 +251,7 @@ function closeInlineStatus(){const d=g('inline-status-dropdown');if(d)d.remove()
 async function fetchProjects(){
   setDbStatus('connecting','Connexion…');
   g('project-list').innerHTML=`<div class="loading-state"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite;font-size:1.2rem"></i> Chargement…</div>`;
-  const{data:pData,error:pErr}=await db.from('projects').select('*').eq('user_id',currentUser.id).order('updated_at',{ascending:false});
+  const{data:pData,error:pErr}=await db.from('projects').select('*').eq('user_id',currentUser.id).order('sort_order',{ascending:true,nullsFirst:false});
   if(pErr){setDbStatus('error','Erreur BDD');toast('Impossible de charger les projets','error');g('project-list').innerHTML=`<div class="empty-state"><i class="ti ti-database-x"></i><p>${pErr.message}</p></div>`;return;}
   const ids=(pData||[]).map(p=>p.id);
   const{data:sData}=ids.length?await db.from('subprojects').select('*').in('parent_id',ids):{data:[]};
@@ -599,15 +608,29 @@ function editNoteInline(nid,pid,sid){
   textarea.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.ctrlKey)save();if(e.key==='Escape')renderProjects();});
 }
 
+/* ══════════════════════════════════════════════════════════
+   CONFIRM MODAL
+   ══════════════════════════════════════════════════════════ */
+let _confirmCb=null;
+function openConfirm(title,msg,cb){
+  g('confirm-title').textContent=title;
+  g('confirm-msg').innerHTML=msg;
+  g('confirm-overlay').classList.add('open');
+  _confirmCb=cb;
+}
+function closeConfirm(){g('confirm-overlay').classList.remove('open');_confirmCb=null;}
+
 async function delNoteAction(nid,pid,sid){
-  if(!confirm('Supprimer cette note ?'))return;
-  const ok=await deleteNote(nid);
-  if(ok){
-    const p=projects.find(x=>x.id===pid);
-    if(sid){const s=p.subprojects.find(x=>x.id===sid);if(s)s.notes=s.notes.filter(n=>n.id!==nid);}
-    else p.notes=p.notes.filter(n=>n.id!==nid);
-    toast('Note supprimée');renderProjects();
-  }
+  const p=projects.find(x=>x.id===pid);
+  const label=sid?p?.subprojects.find(x=>x.id===sid)?.notes.find(x=>x.id===nid)?.text:p?.notes.find(x=>x.id===nid)?.text;
+  openConfirm('Supprimer cette note ?',`<em style="color:var(--text-tertiary)">"${(label||'').slice(0,80)}…"</em>`,async()=>{
+    const ok=await deleteNote(nid);
+    if(ok){
+      if(sid){const s=p.subprojects.find(x=>x.id===sid);if(s)s.notes=s.notes.filter(n=>n.id!==nid);}
+      else p.notes=p.notes.filter(n=>n.id!==nid);
+      toast('Note supprimée');renderProjects();
+    }
+  });
 }
 
 /* ── Duplicate / Archive / Delete ── */
@@ -627,13 +650,20 @@ async function toggleArchive(id){
   await saveProject({...p},false);toast(p.archived?'Projet archivé':'Projet désarchivé');renderSidebar();renderView();
 }
 async function confirmDelete(id){
-  const p=projects.find(x=>x.id===id);if(!confirm(`Supprimer "${p?.name}" ?\nAction irréversible.`))return;
-  if(await deleteProjectFromDb(id)){projects=projects.filter(p=>p.id!==id);expandedIds.delete(id);toast('Projet supprimé');renderSidebar();renderView();}
+  const p=projects.find(x=>x.id===id);
+  openConfirm(
+    'Supprimer ce projet ?',
+    `<strong>${p?.number} — ${p?.name}</strong><br><span style="color:var(--s-sent-fg);font-size:var(--fs-xxs)">Action irréversible. Sous-projets et notes inclus.</span>`,
+    async()=>{if(await deleteProjectFromDb(id)){projects=projects.filter(p=>p.id!==id);expandedIds.delete(id);toast('Projet supprimé');renderSidebar();renderView();}}
+  );
 }
 async function confirmDeleteSub(parentId,subId){
   const parent=projects.find(x=>x.id===parentId);const s=parent?.subprojects.find(x=>x.id===subId);
-  if(!confirm(`Supprimer le sous-projet "${s?.name}" ?`))return;
-  if(await deleteSubprojectFromDb(subId)){parent.subprojects=parent.subprojects.filter(x=>x.id!==subId);toast('Sous-projet supprimé');renderProjects();}
+  openConfirm(
+    'Supprimer ce sous-projet ?',
+    `<strong>${s?.number} — ${s?.name}</strong>`,
+    async()=>{if(await deleteSubprojectFromDb(subId)){parent.subprojects=parent.subprojects.filter(x=>x.id!==subId);toast('Sous-projet supprimé');renderProjects();}}
+  );
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -670,8 +700,8 @@ function openEdit(id){
   g('f-status-m').value=p.status;g('f-imp').value=p.importance||'medium';
   g('f-progress').value=p.progress;g('f-progress-val').textContent=`${p.progress}%`;
   if(p.progress===100||p.status==='done')g('f-progress').style.accentColor='#639922';
-   sv('f-date',p.date||'');sv('f-deadline',p.deadline||'');
-   g('note-label').textContent='Nouvelle note (optionnel)';g('f-note').placeholder='Laisser vide pour ne pas ajouter…';
+  sv('f-date',p.date||'');sv('f-deadline',p.deadline||'');g('f-cat').value=p.cat;
+  g('note-label').textContent='Nouvelle note (optionnel)';g('f-note').placeholder='Laisser vide pour ne pas ajouter…';
   g('prog-hint').textContent='Valeur personnalisée';openModal('Modifier le projet','ti-edit');
 }
 
@@ -729,7 +759,23 @@ function openEditSub(parentId,subId){
 }
 
 /* ── Save ── */
+/* ── Form validation ── */
+function showFieldError(inputId,msg){
+  const el=g(inputId);if(!el)return;
+  el.classList.add('field-error');
+  let em=el.parentNode.querySelector('.field-error-msg');
+  if(!em){em=document.createElement('div');em.className='field-error-msg';el.parentNode.appendChild(em);}
+  em.textContent=msg;em.classList.add('visible');
+  el.addEventListener('input',()=>{el.classList.remove('field-error');em.classList.remove('visible');},{once:true});
+}
+function clearFieldErrors(){
+  g('modal')?.querySelectorAll('.field-error').forEach(el=>el.classList.remove('field-error'));
+  g('modal')?.querySelectorAll('.field-error-msg').forEach(el=>el.classList.remove('visible'));
+}
+
+/* ── Save ── */
 async function handleSave(){
+  clearFieldErrors();
   const num=gv('f-num'),name=gv('f-name'),status=g('f-status-m').value;
   let progress=parseInt(g('f-progress').value)||0;if(status==='done')progress=100;
   const deadline=gv('f-deadline'),date=gv('f-date');
@@ -752,21 +798,38 @@ async function handleSave(){
       toast('Note ajoutée ✓');closeModal();renderView();return;
     }
     if(editingSubParentId!==null&&editingId!==null){
-      if(!num||!name)return;const parent=projects.find(x=>x.id===editingSubParentId);const sub=parent.subprojects.find(x=>x.id===editingId);if(!sub)return;
+      let err=false;
+      if(!num){showFieldError('f-num','Numéro requis');err=true;}
+      if(!name){showFieldError('f-name','Nom requis');err=true;}
+      if(err)return;
+      const parent=projects.find(x=>x.id===editingSubParentId);const sub=parent.subprojects.find(x=>x.id===editingId);if(!sub)return;
       Object.assign(sub,{number:num,name,status,progress});await saveSubproject(editingSubParentId,sub,false);parent.updatedAt=now;await saveProject({...parent},false);toast('Sous-projet mis à jour ✓');
     } else if(editingSubParentId!==null){
-      if(!num||!name)return;const parent=projects.find(x=>x.id===editingSubParentId);
+      let err=false;
+      if(!num){showFieldError('f-num','Numéro requis');err=true;}
+      if(!name){showFieldError('f-name','Nom requis');err=true;}
+      if(err)return;
+      const parent=projects.find(x=>x.id===editingSubParentId);
       const newId=await saveSubproject(editingSubParentId,{number:num,name,status,progress},true);
       if(newId){parent.subprojects.push({id:newId,number:num,name,status,progress,notes:[]});parent.updatedAt=now;await saveProject({...parent},false);}toast('Sous-projet créé ✓');
     } else if(editingId!==null){
-      if(!name)return;const p=projects.find(x=>x.id===editingId);if(!p){toast('Projet introuvable','error');return;}
+      if(!name){showFieldError('f-name','Nom requis');return;}
+      const p=projects.find(x=>x.id===editingId);if(!p){toast('Projet introuvable','error');return;}
       const wasNotDone=p.status!=='done';Object.assign(p,{name,status,progress,date,deadline,editor,client,importance,cat,updatedAt:now});
       if(status==='done'&&wasNotDone)p.ended=now;if(status!=='done')p.ended=null;
       await saveProject({...p},false);
       if(noteText){const nd=await saveNote(p.id,noteText);if(nd)p.notes.push({id:nd.id,date:now,text:noteText});}
       toast('Projet mis à jour ✓');
     } else {
-      if(!num||!name)return;const year=parseInt(num.split('_')[0])||new Date().getFullYear();
+      let err=false;
+      if(!num){showFieldError('f-num','Numéro requis');err=true;}
+      else{
+        const duplicate=projects.find(p=>p.number===num&&p.cat===cat);
+        if(duplicate){showFieldError('f-num',`N° déjà utilisé par "${duplicate.name}"`);err=true;}
+      }
+      if(!name){showFieldError('f-name','Nom requis');err=true;}
+      if(err)return;
+      const year=parseInt(num.split('_')[0])||new Date().getFullYear();
       const newP={number:num,name,cat,status,progress,importance,editor,client,date,deadline,ended:status==='done'?now:null,archived:false,updatedAt:now,year,subprojects:[],notes:[]};
       const newId=await saveProject({...newP},true);
       if(newId){newP.id=newId;if(noteText){const nd=await saveNote(newId,noteText);if(nd)newP.notes.push({id:nd.id,date:now,text:noteText});}projects.push(newP);selectedYear=year;selectedCat=cat;toast('Projet créé ✓');}
@@ -876,6 +939,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   g('btn-save')?.addEventListener('click',handleSave);
   g('modal-overlay')?.addEventListener('click',e=>{if(e.target===g('modal-overlay'))closeModal();});
   g('note-btn-cancel')?.addEventListener('click',closeNoteModal);
+  g('confirm-cancel')?.addEventListener('click',closeConfirm);
+  g('confirm-ok')?.addEventListener('click',async()=>{if(_confirmCb)await _confirmCb();closeConfirm();});
+  g('confirm-overlay')?.addEventListener('click',e=>{if(e.target===g('confirm-overlay'))closeConfirm();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&g('confirm-overlay')?.classList.contains('open'))closeConfirm();});
   g('note-btn-save')?.addEventListener('click',()=>{if(_noteCb)_noteCb();});
   g('note-overlay')?.addEventListener('click',e=>{if(e.target===g('note-overlay'))closeNoteModal();});
   g('note-modal-text')?.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();if(_noteCb)_noteCb();}});
@@ -936,8 +1003,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.addEventListener('mousemove',e=>{if(!isResizing)return;const newW=Math.min(300,Math.max(120,startW+(e.clientX-startX)));sidebar.style.width=newW+'px';});
   document.addEventListener('mouseup',()=>{if(!isResizing)return;isResizing=false;resizer?.classList.remove('dragging');document.body.style.cursor='';document.body.style.userSelect='';savePrefs({sidebarW:sidebar.offsetWidth});});
 
-  // Date masks
-  [g('f-date'),g('f-deadline')].forEach(el=>{if(el)maskDate(el);});
+  // Date masks supprimés — champs type="date" natifs
 
   // Autocomplete
   setupAC('f-editor','editor-suggest',()=>getUniqueList('editor'));
