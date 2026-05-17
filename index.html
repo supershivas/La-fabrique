@@ -141,8 +141,8 @@
         <div id="prog-hint" class="prog-hint">Auto selon le statut — ajustable manuellement</div>
       </div>
       <div class="form-row">
-<div class="fg"><label>Date de début</label><input type="date" id="f-date"/></div>
-<div class="fg"><label>☠ Deadline</label><input type="date" id="f-deadline"/></div>
+        <div class="fg"><label>Date de début</label><input type="date" id="f-date"/></div>
+        <div class="fg"><label>☠ Deadline</label><input type="date" id="f-deadline"/></div>
       </div>
       <div class="fg" id="note-field-wrap">
         <label id="note-label">Note initiale</label>
@@ -237,6 +237,19 @@
   </div>
 
 </div>
+<!-- Confirm modal -->
+<div id="confirm-overlay">
+  <div id="confirm-box">
+    <div id="confirm-icon"><i class="ti ti-trash"></i></div>
+    <div id="confirm-title">Confirmer la suppression</div>
+    <div id="confirm-msg"></div>
+    <div class="modal-footer">
+      <button id="confirm-cancel" class="btn-ghost">Annuler</button>
+      <button id="confirm-ok" class="btn-danger"><i class="ti ti-trash"></i> Supprimer</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="env.js"></script>
 <script src="app.js"></script>
