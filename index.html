@@ -76,6 +76,10 @@
           <option value="">Imp.</option>
           <option value="high">High</option><option value="medium">Med</option><option value="low">Low</option>
         </select>
+        <select id="filter-editor" class="filter">
+          <option value="">Éditeur</option>
+        </select>
+        <span id="result-count" class="result-count"></span>
         <select id="sort-by" class="filter">
           <option value="manual">✥ Manuel</option>
           <option value="updated">↓ Update</option>
@@ -237,6 +241,25 @@
   </div>
 
 </div>
+
+<!-- Year modal -->
+<div id="year-modal-overlay">
+  <div id="year-modal-box">
+    <div class="modal-header" style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:14px">
+      <span style="font-size:var(--fs-sm);font-weight:600">Nouvelle année</span>
+    </div>
+    <div class="fg">
+      <label>Année</label>
+      <input type="number" id="year-modal-input" placeholder="2027" min="2000" max="2100"/>
+      <div id="year-modal-error" style="font-size:var(--fs-xxxs);color:var(--s-sent-fg);margin-top:3px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeYearModal()">Annuler</button>
+      <button class="btn-primary" onclick="confirmYearModal()">Créer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Confirm modal -->
 <div id="confirm-overlay">
   <div id="confirm-box">
