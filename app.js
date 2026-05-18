@@ -8,6 +8,15 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* ── Constants ── */
 const STATUS_LABELS = {ready:'Ready to start',ongoing:'Ongoing',review:'In review',sent:'Sent to client',done:'Done',hold:'On hold'};
+
+const STATUS_ACCENT={
+  ready:'var(--s-ready-fg)',
+  ongoing:'var(--s-ongoing-fg)',
+  review:'var(--s-review-fg)',
+  sent:'var(--s-sent-fg)',
+  done:'var(--s-done-fg)',
+  hold:'var(--s-hold-fg)',
+};
 const STATUS_CLASS  = {ready:'s-ready',ongoing:'s-ongoing',review:'s-review',sent:'s-sent',done:'s-done',hold:'s-hold'};
 const PROG_COLOR    = {ready:'#B4B2A9',ongoing:'#378ADD',review:'#EF9F27',sent:'#D4537E',done:'#639922',hold:'#888780'};
 const AUTO_PROG     = {ready:0,ongoing:40,review:70,sent:80,done:100,hold:null};
@@ -53,10 +62,15 @@ function gv(id){return g(id)?.value.trim()||'';}
 function sv(id,v){if(g(id))g(id).value=v??'';}
 
 /* ── Progress bar ── */
-function pb(pct,status,h='5px'){
-  const c=status==='done'||pct>=100?'#639922':PROG_COLOR[status]||'#888';
+function pb(pct,status){
+  const c=status==='done'||pct>=100?'var(--s-done-fg)':PROG_COLOR[status]||'var(--text-tertiary)';
   const label=STATUS_LABELS[status]||status;
-  return`<div class="prog-wrap"><div class="prog-bar-bg"><div class="prog-fill-bg" style="width:${pct}%;background:${c}"></div><span class="prog-label">${label}</span></div></div>`;
+  const sCls='s-'+status;
+  return`<div class="prog-wrap">
+    <div class="prog-bar-bg"><div class="prog-fill-bg" style="width:${pct}%;background:${c}"></div></div>
+    <span class="prog-pct">${pct}%</span>
+    <span class="status-badge ${sCls}">${label}</span>
+  </div>`;
 }
 
 /* ── Order ── */
@@ -563,7 +577,8 @@ function buildProjectCard(p,draggable=false){
     expandedSection=`<div class="proj-expanded">${subsSection}${notesSection}</div>`;
   }
 
-  return`<div class="proj-card ${open?'expanded':''}" data-pid="${p.id}" ${draggable?'draggable="true"':''}>
+  const cardAccent=STATUS_ACCENT[p.status]||'var(--border)';
+  return`<div class="proj-card ${open?'expanded':''}" data-pid="${p.id}" ${draggable?'draggable="true"':''}  style="--card-accent:${cardAccent}">
     <div class="pr-row" data-action="toggle" data-pid="${p.id}">
       <div class="pr-col-ctrl">
         ${dragHandle}
@@ -1021,7 +1036,7 @@ function renderDashboard(){
       <div class="dash-card dash-wide">
         <div class="dash-title"><i class="ti ti-chart-bar"></i> Par statut</div>
         <div class="dash-status-grid">${Object.entries(STATUS_LABELS).map(([k,v])=>`<div class="dash-stat-pill"><span class="status-badge ${STATUS_CLASS[k]}">${v}</span><span class="dash-stat-num">${byStatus[k]||0}</span></div>`).join('')}</div>
-        <div class="dash-progress-row"><span style="font-size:var(--fs-xxxs);color:var(--text-tertiary)">Completion</span><div style="flex:1;margin:0 10px">${pb(cr,'done','8px')}</div><strong style="font-size:var(--fs-xs);color:var(--s-done-fg)">${cr}%</strong></div>
+        <div class="dash-progress-row"><span style="font-size:var(--fs-xxxs);color:var(--text-tertiary)">Completion</span><div style="flex:1;margin:0 10px">${pb(cr,'done')}</div><strong style="font-size:var(--fs-xs);color:var(--s-done-fg)">${cr}%</strong></div>
       </div>
       <div class="dash-card">
         <div class="dash-title"><i class="ti ti-alert-triangle"></i> Alertes</div>
@@ -1029,7 +1044,7 @@ function renderDashboard(){
       </div>
     </div>
     <div class="dash-row">
-      <div class="dash-card dash-sm"><div class="dash-title"><i class="ti ti-trending-up"></i> Avancement</div><div class="dash-big-num">${avgProg}<span style="font-size:1rem;font-weight:400;color:var(--text-tertiary)">%</span></div><div style="font-size:var(--fs-xxxs);color:var(--text-tertiary);margin-top:4px">${active.length} projet${active.length>1?'s':''} actif${active.length>1?'s':''}</div>${pb(avgProg,'ongoing','8px')}</div>
+      <div class="dash-card dash-sm"><div class="dash-title"><i class="ti ti-trending-up"></i> Avancement</div><div class="dash-big-num">${avgProg}<span style="font-size:1rem;font-weight:400;color:var(--text-tertiary)">%</span></div><div style="font-size:var(--fs-xxxs);color:var(--text-tertiary);margin-top:4px">${active.length} projet${active.length>1?'s':''} actif${active.length>1?'s':''}</div>${pb(avgProg,'ongoing')}</div>
       <div class="dash-card dash-sm"><div class="dash-title"><i class="ti ti-flag"></i> Importance</div>${[['high','var(--imp-high)'],['medium','var(--imp-med)'],['low','var(--imp-low)']].map(([k,c])=>`<div class="dash-imp-row"><span style="background:${c};width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0"></span><span style="font-size:var(--fs-xs);flex:1">${IMP_LBL[k]}</span><div style="width:70px;height:5px;background:var(--bg-hover);border-radius:3px;overflow:hidden"><div style="width:${total?Math.round((impMap[k]/total)*100):0}%;height:100%;background:${c};border-radius:3px"></div></div><strong style="font-size:var(--fs-xs);min-width:18px;text-align:right">${impMap[k]}</strong></div>`).join('')}</div>
       <div class="dash-card"><div class="dash-title"><i class="ti ti-users"></i> Top clients</div>${topClients.length===0?`<div class="dash-empty">Aucun client</div>`:topClients.map(([c,n])=>`<div class="dash-client-row"><i class="ti ti-user" style="color:var(--text-tertiary)"></i><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c}</span><span class="dash-badge">${n}</span></div>`).join('')}</div>
       <div class="dash-card dash-sm"><div class="dash-title"><i class="ti ti-list-check"></i> Résumé</div><div class="dash-summary-row"><span>Total</span><strong>${total}</strong></div><div class="dash-summary-row"><span>Terminés</span><strong style="color:var(--s-done-fg)">${done}</strong></div><div class="dash-summary-row"><span>En retard</span><strong style="color:var(--dl-over)">${overdue.length}</strong></div><div class="dash-summary-row"><span>Deadline proche</span><strong style="color:var(--dl-warn)">${dueSoon.length}</strong></div><div class="dash-summary-row"><span>Archivés</span><strong style="color:var(--text-tertiary)">${projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&p.archived).length}</strong></div></div>
