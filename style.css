@@ -393,3 +393,13 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:28px
 .fg input.field-error,.fg select.field-error{border-color:var(--s-sent-fg)!important;outline:1px solid var(--s-sent-fg)}
 .field-error-msg{font-size:var(--fs-xxxs);color:var(--s-sent-fg);margin-top:3px;display:none}
 .field-error-msg.visible{display:block}
+
+/* ── Result count + editor filter ── */
+.result-count{font-size:var(--fs-xxxs);color:var(--text-tertiary);background:var(--bg-hover);border-radius:var(--radius-sm);padding:2px 7px;white-space:nowrap;display:none}
+
+/* ── Year modal ── */
+#year-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1300;align-items:center;justify-content:center;padding:16px}
+#year-modal-overlay.open{display:flex}
+#year-modal-box{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;width:100%;max-width:280px;box-shadow:var(--shadow-md);animation:fadeIn .15s ease}
+#year-modal-input{-moz-appearance:textfield}
+#year-modal-input::-webkit-outer-spin-button,#year-modal-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
