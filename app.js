@@ -790,18 +790,43 @@ async function confirmDeleteSub(parentId,subId){
 /* ══════════════════════════════════════════════════════════
    MODAL
    ══════════════════════════════════════════════════════════ */
+
+/* ── Modal field visibility ── */
+// cas: 'new-proj' | 'edit-proj' | 'new-sub' | 'edit-sub'
+function showModalFields(cas){
+  const blocs={
+    'bloc-num'    : ['new-proj','new-sub'],
+    'bloc-num-ro' : ['edit-proj','edit-sub'],
+    'bloc-cat'    : ['new-proj'],
+    'bloc-meta'   : ['new-proj','edit-proj'],
+    'bloc-imp'    : ['new-proj','edit-proj'],
+    'bloc-note'   : ['new-proj','edit-proj'],
+    'bloc-name'   : ['new-proj','edit-proj','new-sub','edit-sub'],
+    'bloc-status' : ['new-proj','edit-proj','new-sub','edit-sub'],
+  };
+  Object.entries(blocs).forEach(([id,cases])=>{
+    const el=g(id);if(!el)return;
+    el.style.display=cases.includes(cas)?'':'none';
+  });
+  // label contextuel
+  const lbl=g('f-name-label');
+  if(lbl)lbl.textContent=cas.includes('sub')?'Nom du sous-projet':'Nom du projet';
+  const ph=g('f-name');
+  if(ph)ph.placeholder=cas.includes('sub')?'Nom du sous-projet':'Nom du projet';
+}
+
 function resetModal(){
   editingId=null;editingSubParentId=null;addingNoteTo=null;addingNoteToSub=null;sliderManual=false;
-  // restore all hidden fields
-  g('modal')?.querySelectorAll('.fg,.form-row').forEach(el=>el.style.display='');
-  ['f-num','f-name','f-editor','f-client','f-note'].forEach(id=>{const el=g(id);if(el){el.value='';el.disabled=false;}});
+  ['f-num','f-num-ro','f-name','f-editor','f-client','f-note'].forEach(id=>{const el=g(id);if(el){el.value='';el.disabled=false;}});
   g('f-status-m').value='ready';g('f-imp').value='medium';
   g('f-progress').value=0;g('f-progress-val').textContent='0%';
   if(g('f-progress'))g('f-progress').style.accentColor='var(--accent)';
   g('f-date').value='';g('f-deadline').value='';g('f-cat').value=selectedCat;
-  g('note-field-wrap').style.display='block';g('note-label').textContent='Note initiale';
-  g('f-note').placeholder='Ajouter une note…';g('prog-hint').textContent='Auto selon le statut — ajustable manuellement';
+  g('note-label').textContent='Note initiale';
+  g('f-note').placeholder='Ajouter une note…';
+  g('prog-hint').textContent='Auto selon le statut — ajustable manuellement';
   g('editor-suggest').style.display='none';g('client-suggest').style.display='none';
+  clearFieldErrors();
 }
 function openModal(title,icon='ti-folder'){g('modal-title').innerHTML=`<i class="ti ${icon}"></i>${title}`;g('modal-overlay').classList.add('open');}
 function closeModal(){g('modal-overlay').classList.remove('open');resetModal();}
@@ -812,22 +837,19 @@ function syncSlider(status){
   g('prog-hint').textContent=`Auto : ${auto}% pour "${STATUS_LABELS[status]}" — ajustable`;
 }
 
-function openNewProject(){resetModal();syncSlider('ready');openModal('Nouveau projet','ti-folder-plus');}
+function openNewProject(){resetModal();showModalFields('new-proj');syncSlider('ready');openModal('Nouveau projet','ti-folder-plus');}
 
 function openEdit(id){
-  resetModal();editingId=id;sliderManual=true;
+  resetModal();showModalFields('edit-proj');editingId=id;sliderManual=true;
   const p=projects.find(x=>x.id===id);if(!p){toast('Projet introuvable','error');return;}
-  sv('f-num',p.number);sv('f-name',p.name);sv('f-editor',p.editor);sv('f-client',p.client);
+  sv('f-num-ro',p.number);sv('f-name',p.name);sv('f-editor',p.editor);sv('f-client',p.client);
   g('f-status-m').value=p.status;g('f-imp').value=p.importance||'medium';
   g('f-progress').value=p.progress;g('f-progress-val').textContent=`${p.progress}%`;
   if(p.progress===100||p.status==='done')g('f-progress').style.accentColor='#639922';
   sv('f-date',p.date||'');sv('f-deadline',p.deadline||'');g('f-cat').value=p.cat;
-  g('note-label').textContent='Nouvelle note (optionnel)';g('f-note').placeholder='Laisser vide pour ne pas ajouter…';
-  g('prog-hint').textContent='Valeur personnalisée';openModal('Modifier le projet','ti-edit');
+  g('note-label').textContent='Nouvelle note';g('f-note').placeholder='Ajouter une note…';
+  openModal(`Modifier — ${esc(p.number)}`,'ti-edit');
 }
-
-/* ── Note modal dédié ── */
-let _noteCb=null;
 function openNoteModal(title,cb){
   g('note-modal-title').innerHTML=`<i class="ti ti-notes"></i>${title}`;
   g('note-modal-text').value='';
@@ -860,27 +882,20 @@ function openAddSubNote(parentId,subId){
 }
 
 function openNewSub(parentId){
-  resetModal();editingSubParentId=parentId;
+  resetModal();showModalFields('new-sub');editingSubParentId=parentId;
   const parent=projects.find(x=>x.id===parentId);if(!parent){toast('Projet introuvable','error');return;}
   sv('f-num',`${parent.number}_${String(parent.subprojects.length+1).padStart(2,'0')}`);
-  sv('f-editor',parent.editor);sv('f-client',parent.client);
-  g('note-field-wrap').style.display='none';
-  g('f-deadline')?.closest('.form-row')&&(g('f-deadline').closest('.form-row').style.display='none');
-  openModal('Nouveau sous-projet','ti-folders');
+  openModal(`Sous-projet — ${esc(parent.number)}`,'ti-folders');
 }
-
 function openEditSub(parentId,subId){
-  resetModal();editingSubParentId=parentId;editingId=subId;sliderManual=true;
-  const parent=projects.find(x=>x.id===parentId);const s=parent?.subprojects.find(x=>x.id===subId);if(!s){toast('Sous-projet introuvable','error');return;}
-  sv('f-num',s.number);sv('f-name',s.name);sv('f-editor',parent.editor);sv('f-client',parent.client);
+  resetModal();showModalFields('edit-sub');editingSubParentId=parentId;editingId=subId;sliderManual=true;
+  const parent=projects.find(x=>x.id===parentId);const s=parent?.subprojects.find(x=>x.id===subId);
+  if(!s){toast('Sous-projet introuvable','error');return;}
+  sv('f-num-ro',s.number);sv('f-name',s.name);
   g('f-status-m').value=s.status;g('f-progress').value=s.progress;g('f-progress-val').textContent=`${s.progress}%`;
   if(s.progress===100||s.status==='done')g('f-progress').style.accentColor='#639922';
-  g('note-field-wrap').style.display='none';g('f-deadline')?.closest('.form-row')&&(g('f-deadline').closest('.form-row').style.display='none');
-  g('prog-hint').textContent='Valeur personnalisée';openModal('Modifier le sous-projet','ti-edit');
+  openModal(`Modifier — ${esc(s.number)}`,'ti-edit');
 }
-
-/* ── Save ── */
-/* ── Form validation ── */
 function showFieldError(inputId,msg){
   const el=g(inputId);if(!el)return;
   el.classList.add('field-error');
