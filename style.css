@@ -422,3 +422,7 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:28px
 @media(min-width:641px){#filter-drawer,#filter-drawer-overlay,#btn-filter-mobile{display:none!important}}
 #filter-status-m,#filter-imp-m,#filter-editor-m,#sort-by-m{display:block}
 .bnav-item.filter-active{color:var(--accent-primary)!important}
+
+/* ── Modal blocs ── */
+.modal-bloc{display:block}
+.input-readonly{background:var(--bg-hover)!important;color:var(--text-tertiary)!important;cursor:default;border-color:transparent!important;font-family:var(--font-mono,monospace);font-size:var(--fs-xs);letter-spacing:.03em}
