@@ -11,7 +11,8 @@ const STATUS_LABELS = {ready:'Ready to start',ongoing:'Ongoing',review:'In revie
 const STATUS_CLASS  = {ready:'s-ready',ongoing:'s-ongoing',review:'s-review',sent:'s-sent',done:'s-done',hold:'s-hold'};
 const PROG_COLOR    = {ready:'#B4B2A9',ongoing:'#378ADD',review:'#EF9F27',sent:'#D4537E',done:'#639922',hold:'#888780'};
 const AUTO_PROG     = {ready:0,ongoing:40,review:70,sent:80,done:100,hold:null};
-const IMP_DOT       = {low:'imp-low',medium:'imp-med',high:'imp-high'};
+const IMP_DOT       = {low:'imp-low',medium:'imp-med',high:'imp-high'}; // kept for dashboard dots
+const IMP_TAG       = {low:'imp-tag-low',medium:'imp-tag-med',high:'imp-tag-high'};
 const IMP_LBL       = {low:'Low',medium:'Medium',high:'High'};
 
 /* ── State ── */
@@ -545,7 +546,7 @@ function buildProjectCard(p,draggable=false){
         ${metaTags}
       </div>
       <div class="pr-col-actions" onclick="event.stopPropagation()">
-        <span class="imp-dot ${IMP_DOT[p.importance]}" title="${IMP_LBL[p.importance]}"></span>
+        <span class="imp-tag ${IMP_TAG[p.importance]}">${IMP_LBL[p.importance]}</span>
         <button class="btn-edit-main" data-action="edit-proj" data-pid="${p.id}">
           <i class="ti ti-edit"></i><span>Modifier</span>
         </button>
