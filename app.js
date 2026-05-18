@@ -469,17 +469,26 @@ function buildNotesSection(notes,actionPrefix,pid,sid=null){
 
 function clearFilters(){
   const s=g('search');if(s)s.value='';
-  const fs=g('filter-status');if(fs)fs.value='';
-  const fi=g('filter-imp');if(fi)fi.value='';
-  const fe=g('filter-editor');if(fe)fe.value='';
+  ['filter-status','filter-imp','filter-editor'].forEach(id=>{
+    const el=g(id);if(el){el.value='';el.classList.remove('filter-on');}
+  });
+  const cb=g('btn-clear-filters');if(cb)cb.style.display='none';
   renderView();
 }
 function renderProjects(){
   const list=getFiltered(),container=g('project-list');if(!container)return;
-  // Update result count
+  // Update result count + filter active states
   const rc=g('result-count');
   const total=projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&(showArchived?p.archived:!p.archived)).length;
   if(rc){rc.textContent=list.length<total?`${list.length} / ${total}`:list.length>0?`${list.length}`:'';rc.style.display=list.length<total?'inline':'none';}
+  // Active state on filter selects
+  ['filter-status','filter-imp','filter-editor'].forEach(id=>{
+    const el=g(id);if(!el)return;
+    el.classList.toggle('filter-on',!!el.value);
+  });
+  // Show/hide clear button
+  const anyFilter=g('filter-status')?.value||g('filter-imp')?.value||g('filter-editor')?.value||g('search')?.value;
+  const cb=g('btn-clear-filters');if(cb)cb.style.display=anyFilter?'inline-flex':'none';
   // Refresh editor filter options
   const edSel=g('filter-editor');
   if(edSel){
@@ -1113,6 +1122,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   g('filter-imp')?.addEventListener('change',renderView);
   g('sort-by')?.addEventListener('change',renderView);
   g('filter-editor')?.addEventListener('change',renderView);
+  g('btn-clear-filters')?.addEventListener('click',clearFilters);
 
   /* ── Filter drawer (mobile) ── */
   function syncDrawerSelects(){
