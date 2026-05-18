@@ -98,9 +98,33 @@
     <button class="bnav-item active" data-cat="pro"    data-view="list"><i class="ti ti-briefcase"></i><span>Pro</span></button>
     <button class="bnav-item"        data-cat="perso"  data-view="list"><i class="ti ti-home"></i><span>Perso</span></button>
     <button class="bnav-item"        data-view="stats"><i class="ti ti-chart-bar"></i><span>Stats</span></button>
-    <button class="bnav-item"        data-view="settings"><i class="ti ti-settings"></i><span>Config</span></button>
+    <button class="bnav-item"        id="btn-filter-mobile"><i class="ti ti-adjustments-horizontal"></i><span>Filtres</span></button>
     <button class="bnav-item"        data-view="new"><i class="ti ti-plus"></i><span>Nouveau</span></button>
   </nav>
+
+  <!-- Filter drawer (mobile) -->
+  <div id="filter-drawer-overlay"></div>
+  <div id="filter-drawer">
+    <div id="filter-drawer-handle"></div>
+    <div class="filter-drawer-title">Filtres &amp; tri</div>
+    <div class="fg">
+      <label>Statut</label>
+      <select id="filter-status-m" class="filter"></select>
+    </div>
+    <div class="fg">
+      <label>Importance</label>
+      <select id="filter-imp-m" class="filter"></select>
+    </div>
+    <div class="fg">
+      <label>Éditeur</label>
+      <select id="filter-editor-m" class="filter"></select>
+    </div>
+    <div class="fg">
+      <label>Tri</label>
+      <select id="sort-by-m" class="filter"></select>
+    </div>
+    <button id="filter-drawer-reset" class="btn-ghost" style="width:100%;margin-top:4px">Effacer les filtres</button>
+  </div>
 
   <!-- MODAL PROJET / SOUS-PROJET -->
   <div id="modal-overlay">
