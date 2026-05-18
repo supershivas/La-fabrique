@@ -76,6 +76,14 @@ function saveOrder(list){
 }
 function loadOrder(){try{const r=localStorage.getItem('lf_order');if(r)manualOrder=JSON.parse(r);}catch(_){}}
 
+/* ── XSS escape ── */
+function esc(str){
+  if(str==null)return'';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+
+
 /* ── Prefs ── */
 const PK='lf_prefs';
 function loadPrefs(){try{const r=localStorage.getItem(PK);return r?JSON.parse(r):{}}catch(_){return{};}}
@@ -293,6 +301,33 @@ async function deleteSubprojectFromDb(id){const{error}=await db.from('subproject
 /* ══════════════════════════════════════════════════════════
    SIDEBAR
    ══════════════════════════════════════════════════════════ */
+
+/* ── Year modal ── */
+let _yearModalCat=null;
+function openYearModal(cat){
+  _yearModalCat=cat;
+  const ov=g('year-modal-overlay');
+  const inp=g('year-modal-input');
+  if(!ov||!inp)return;
+  inp.value='';
+  g('year-modal-error').textContent='';
+  ov.classList.add('open');
+  setTimeout(()=>inp.focus(),80);
+}
+function closeYearModal(){g('year-modal-overlay')?.classList.remove('open');}
+function confirmYearModal(){
+  const inp=g('year-modal-input');
+  const val=inp?.value.trim();
+  const err=g('year-modal-error');
+  if(!val||isNaN(val)||parseInt(val)<2000||parseInt(val)>2100){
+    if(err)err.textContent='Année invalide (2000–2100)';
+    inp?.focus();return;
+  }
+  const y=parseInt(val);
+  selectedYear=y;selectedCat=_yearModalCat;
+  closeYearModal();renderSidebar();renderView();
+}
+
 function renderSidebar(){
   ['pro','perso'].forEach(cat=>{
     const container=g('yl-'+cat);if(!container)return;
@@ -305,7 +340,7 @@ function renderSidebar(){
     }).join('')+`<div class="year-item year-item-add" data-y="new" data-c="${cat}"><i class="ti ti-plus" style="font-size:.65rem"></i> Année</div>`;
     container.querySelectorAll('.year-item').forEach(item=>{
       item.addEventListener('click',()=>{
-        if(item.dataset.y==='new'){const y=prompt('Nouvelle année (ex: 2027)');if(y&&!isNaN(y)){selectedYear=parseInt(y);selectedCat=cat;renderSidebar();renderView();}return;}
+        if(item.dataset.y==='new'){openYearModal(cat);return;}
         selectedYear=parseInt(item.dataset.y);selectedCat=item.dataset.c;showDashboard=false;renderSidebar();renderView();
       });
     });
@@ -359,8 +394,10 @@ function setupSubDragDrop(subContainer,parentId){
 function getFiltered(){
   const q=g('search').value.toLowerCase(),st=g('filter-status').value,imp=g('filter-imp').value,sort=g('sort-by').value;
   let list=projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&(showArchived?p.archived:!p.archived));
-  if(q)list=list.filter(p=>p.name.toLowerCase().includes(q)||p.number.toLowerCase().includes(q)||(p.editor&&p.editor.toLowerCase().includes(q))||(p.client&&p.client.toLowerCase().includes(q))||p.notes.some(n=>n.text.toLowerCase().includes(q)));
+  if(q)list=list.filter(p=>p.name.toLowerCase().includes(q)||p.number.toLowerCase().includes(q)||(p.editor&&p.editor.toLowerCase().includes(q))||(p.client&&p.client.toLowerCase().includes(q))||p.notes.some(n=>n.text.toLowerCase().includes(q))||(p.subprojects&&p.subprojects.some(s=>s.notes&&s.notes.some(n=>n.text.toLowerCase().includes(q)))));
+  const ed=g('filter-editor')?.value||'';
   if(st)list=list.filter(p=>p.status===st);if(imp)list=list.filter(p=>p.importance===imp);
+  if(ed)list=list.filter(p=>p.editor&&p.editor.toLowerCase().includes(ed.toLowerCase()));
   if(sort==='manual')return getOrderedList(list);
   if(sort==='number')return list.sort((a,b)=>a.number.localeCompare(b.number));
   if(sort==='name')  return list.sort((a,b)=>a.name.localeCompare(b.name));
@@ -389,7 +426,7 @@ function buildNotesSection(notes,actionPrefix,pid,sid=null){
           <button class="btn-icon" data-action="${actionPrefix}-del-note"  data-nid="${n.id}" data-pid="${pid}" data-sid="${sid||''}" style="font-size:.75rem;color:var(--s-sent-fg)"><i class="ti ti-trash"></i></button>
         </div>
       </div>
-      <div class="note-text" id="note-text-${n.id}">${n.text}</div>
+      <div class="note-text" id="note-text-${n.id}">${esc(n.text)}</div>
     </div>`;
 
   return`
@@ -405,10 +442,40 @@ function buildNotesSection(notes,actionPrefix,pid,sid=null){
 /* ══════════════════════════════════════════════════════════
    BUILD CARDS
    ══════════════════════════════════════════════════════════ */
+
+function clearFilters(){
+  const s=g('search');if(s)s.value='';
+  const fs=g('filter-status');if(fs)fs.value='';
+  const fi=g('filter-imp');if(fi)fi.value='';
+  const fe=g('filter-editor');if(fe)fe.value='';
+  renderView();
+}
 function renderProjects(){
   const list=getFiltered(),container=g('project-list');if(!container)return;
+  // Update result count
+  const rc=g('result-count');
+  const total=projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&(showArchived?p.archived:!p.archived)).length;
+  if(rc){rc.textContent=list.length<total?`${list.length} / ${total}`:list.length>0?`${list.length}`:'';rc.style.display=list.length<total?'inline':'none';}
+  // Refresh editor filter options
+  const edSel=g('filter-editor');
+  if(edSel){
+    const curEd=edSel.value;
+    const editors=[...new Set(projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&p.editor).map(p=>p.editor.trim()).filter(Boolean))].sort();
+    edSel.innerHTML='<option value="">Éditeur</option>'+editors.map(e=>`<option value="${esc(e)}" ${curEd===e?'selected':''}>${esc(e)}</option>`).join('');
+  }
   const isDraggable=g('sort-by').value==='manual';
-  if(!list.length){container.innerHTML=`<div class="empty-state"><i class="ti ti-inbox"></i><p>${showArchived?'Aucun projet archivé':'Aucun projet — appuie sur N pour commencer'}</p></div>`;return;}
+  if(!list.length){
+    const q=g('search').value,st=g('filter-status').value,imp=g('filter-imp').value,ed=g('filter-editor')?.value||'';
+    const hasFilter=q||st||imp||ed;
+    if(showArchived){
+      container.innerHTML=`<div class="empty-state"><i class="ti ti-archive"></i><p>Aucun projet archivé</p></div>`;
+    } else if(hasFilter){
+      container.innerHTML=`<div class="empty-state"><i class="ti ti-filter-off"></i><p>Aucun résultat pour ce filtre</p><button class="btn-ghost" onclick="clearFilters()" style="margin-top:8px">Effacer les filtres</button></div>`;
+    } else {
+      container.innerHTML=`<div class="empty-state"><i class="ti ti-inbox"></i><p>Aucun projet — appuie sur <kbd>N</kbd> pour commencer</p></div>`;
+    }
+    return;
+  }
   container.innerHTML=list.map(p=>buildProjectCard(p,isDraggable)).join('');
   attachCardListeners();
   if(isDraggable)setupDragDrop(container);
@@ -423,8 +490,8 @@ function buildMetaTags(p){
   const clients=p.client?p.client.split(',').map(s=>s.trim()).filter(Boolean):[];
   return[
     '',
-    p.editor?`<span class="tag-chip"><i class="ti ti-building" style="font-size:.6rem"></i>${p.editor}</span>`:'',
-    clients.map(c=>`<span class="tag-chip"><i class="ti ti-user" style="font-size:.6rem"></i>${c}</span>`).join(''),
+    p.editor?`<span class="tag-chip"><i class="ti ti-building" style="font-size:.6rem"></i>${esc(p.editor)}</span>`:'',
+    clients.map(c=>`<span class="tag-chip"><i class="ti ti-user" style="font-size:.6rem"></i>${esc(c)}</span>`).join(''),
     p.date?`<span class="tag-chip"><i class="ti ti-calendar" style="font-size:.6rem"></i>${toEU(p.date)}</span>`:'',
     p.deadline?`<span class="tag-chip ${dlClass}">☠ ${toEU(p.deadline)}</span>`:'',
     p.ended?`<span class="tag-chip" style="color:var(--s-done-fg)">✓ ${toEU(p.ended)}</span>`:'',
@@ -468,8 +535,8 @@ function buildProjectCard(p,draggable=false){
         <i class="ti ti-chevron-right pr-chevron ${open?'open':''}"></i>
       </div>
       <div class="pr-col-name">
-        <span class="proj-num">${p.number}</span>
-        <span class="proj-name">${p.name}</span>
+        <span class="proj-num">${esc(p.number)}</span>
+        <span class="proj-name">${esc(p.name)}</span>
       </div>
       <div class="pr-col-bar" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()">
         ${pb(p.progress,p.status)}
@@ -512,8 +579,8 @@ function buildSubCard(s,parent){
         <i class="ti ti-chevron-right sub-chevron ${open?'open':''}"></i>
       </div>
       <div class="sub-col-name">
-        <span class="sub-num">${s.number}</span>
-        <span class="sub-name">${s.name}</span>
+        <span class="sub-num">${esc(s.number)}</span>
+        <span class="sub-name">${esc(s.name)}</span>
       </div>
       <div class="sub-col-bar" data-action="inline-status-sub" data-pid="${parent.id}" data-sid="${s.id}" onclick="event.stopPropagation()">
         ${pb(s.progress,s.status)}
@@ -653,7 +720,7 @@ async function confirmDelete(id){
   const p=projects.find(x=>x.id===id);
   openConfirm(
     'Supprimer ce projet ?',
-    `<strong>${p?.number} — ${p?.name}</strong><br><span style="color:var(--s-sent-fg);font-size:var(--fs-xxs)">Action irréversible. Sous-projets et notes inclus.</span>`,
+    `<strong>${esc(p?.number)} — ${esc(p?.name)}</strong><br><span style="color:var(--s-sent-fg);font-size:var(--fs-xxs)">Action irréversible. Sous-projets et notes inclus.</span>`,
     async()=>{if(await deleteProjectFromDb(id)){projects=projects.filter(p=>p.id!==id);expandedIds.delete(id);toast('Projet supprimé');renderSidebar();renderView();}}
   );
 }
@@ -661,7 +728,7 @@ async function confirmDeleteSub(parentId,subId){
   const parent=projects.find(x=>x.id===parentId);const s=parent?.subprojects.find(x=>x.id===subId);
   openConfirm(
     'Supprimer ce sous-projet ?',
-    `<strong>${s?.number} — ${s?.name}</strong>`,
+    `<strong>${esc(s?.number)} — ${esc(s?.name)}</strong>`,
     async()=>{if(await deleteSubprojectFromDb(subId)){parent.subprojects=parent.subprojects.filter(x=>x.id!==subId);toast('Sous-projet supprimé');renderProjects();}}
   );
 }
@@ -862,7 +929,7 @@ function renderDashboard(){
       </div>
       <div class="dash-card">
         <div class="dash-title"><i class="ti ti-alert-triangle"></i> Alertes</div>
-        ${overdue.length===0&&dueSoon.length===0?`<div class="dash-empty">✓ Aucune deadline critique</div>`:`${overdue.map(p=>`<div class="dash-alert over"><span class="dash-alert-num">${p.number}</span><span class="dash-alert-name">${p.name}</span><span class="dash-alert-dl">☠ ${toEU(p.deadline)}</span></div>`).join('')}${dueSoon.map(p=>`<div class="dash-alert warn"><span class="dash-alert-num">${p.number}</span><span class="dash-alert-name">${p.name}</span><span class="dash-alert-dl">⚠ ${toEU(p.deadline)}</span></div>`).join('')}`}
+        ${overdue.length===0&&dueSoon.length===0?`<div class="dash-empty">✓ Aucune deadline critique</div>`:`${overdue.map(p=>`<div class="dash-alert over"><span class="dash-alert-num">${esc(p.number)}</span><span class="dash-alert-name">${esc(p.name)}</span><span class="dash-alert-dl">☠ ${toEU(p.deadline)}</span></div>`).join('')}${dueSoon.map(p=>`<div class="dash-alert warn"><span class="dash-alert-num">${p.number}</span><span class="dash-alert-name">${p.name}</span><span class="dash-alert-dl">⚠ ${toEU(p.deadline)}</span></div>`).join('')}`}
       </div>
     </div>
     <div class="dash-row">
@@ -906,6 +973,19 @@ function renderLoginScreen(){
   [g('auth-email'),g('auth-password')].forEach(i=>i.addEventListener('keydown',e=>{if(e.key==='Enter')doAuth();}));
 }
 
+/* ── Auth state listener ── */
+function initAuthListener(){
+  db.auth.onAuthStateChange((event,session)=>{
+    if(event==='SIGNED_OUT'||(event==='TOKEN_REFRESHED'&&!session)){
+      currentUser=null;projects=[];
+      toast('Session expirée, reconnectez-vous','error');
+      setTimeout(()=>renderLoginScreen(),1500);
+    } else if(event==='TOKEN_REFRESHED'&&session){
+      currentUser=session.user;
+    }
+  });
+}
+
 async function checkAuth(){
   const{data:{session}}=await db.auth.getSession();
   if(session?.user){currentUser=session.user;loadOrder();applyPrefs();fetchProjects();const logout=g('btn-logout');if(logout)logout.title=currentUser.email;}
@@ -942,6 +1022,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   g('confirm-cancel')?.addEventListener('click',e=>{e.stopPropagation();closeConfirm();});
   g('confirm-ok')?.addEventListener('click',async e=>{e.stopPropagation();const cb=_confirmCb;closeConfirm();if(cb)await cb();});
   g('confirm-overlay')?.addEventListener('click',e=>{if(e.target===g('confirm-overlay'))closeConfirm();});
+  g('year-modal-overlay')?.addEventListener('click',e=>{if(e.target===g('year-modal-overlay'))closeYearModal();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&g('confirm-overlay')?.classList.contains('open'))closeConfirm();});
   g('note-btn-save')?.addEventListener('click',()=>{if(_noteCb)_noteCb();});
   g('note-overlay')?.addEventListener('click',e=>{if(e.target===g('note-overlay'))closeNoteModal();});
@@ -962,6 +1043,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   g('filter-status')?.addEventListener('change',renderView);
   g('filter-imp')?.addEventListener('change',renderView);
   g('sort-by')?.addEventListener('change',renderView);
+  g('filter-editor')?.addEventListener('change',renderView);
 
   g('btn-dashboard')?.addEventListener('click',()=>{showDashboard=!showDashboard;g('btn-dashboard')?.classList.toggle('active',showDashboard);renderView();});
   g('btn-export')?.addEventListener('click',exportCSV);
@@ -1018,5 +1100,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(e.key==='Escape'){closeModal();closeSettings();closeInlineStatus();closeCtxMenu();}
   });
 
+  initAuthListener();
   checkAuth();
 });
