@@ -74,11 +74,11 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .sidebar-scroll{flex:1;overflow-y:auto;overflow-x:hidden}
 .cat-section{padding:8px 0}
 .cat-divider{height:1px;background:var(--border)}
-.cat-label{font-size:var(--fs-xxxs);font-weight:700;color:var(--text-tertiary);letter-spacing:.10em;text-transform:uppercase;padding:0 12px 4px}
-.year-item{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;cursor:pointer;font-size:var(--fs-xs);font-weight:500;color:var(--text-secondary);transition:background .12s;user-select:none;white-space:nowrap;overflow:hidden}
-.year-item:hover{background:var(--bg-hover)}.year-item.active{background:var(--accent-light);color:var(--accent)}
-.year-count{font-size:var(--fs-xxxs);background:var(--bg-hover);padding:1px 5px;border-radius:10px;font-weight:500;flex-shrink:0}
-.year-item.active .year-count{background:rgba(201,151,58,.18);color:var(--accent)}
+.cat-label{font-size:var(--fs-xxxs);font-weight:700;color:var(--text-tertiary);letter-spacing:.10em;text-transform:uppercase;padding:10px 18px 5px}
+.year-item{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;cursor:pointer;font-size:var(--fs-xs);font-weight:500;color:var(--text-secondary);transition:background .12s,color .12s;user-select:none;white-space:nowrap;overflow:hidden;border-radius:var(--radius-md);margin:1px 6px}
+.year-item:hover{background:var(--bg-hover);color:var(--text-primary)}.year-item.active{background:var(--accent-light);color:var(--accent);font-weight:600}
+.year-count{font-size:var(--fs-xxxs);background:var(--bg-hover);padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0;transition:background .12s,color .12s}
+.year-item.active .year-count{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
 .year-item-add{font-size:var(--fs-xxxs);color:var(--text-tertiary)}
 .overdue-badge{color:var(--dl-over);font-size:var(--fs-xxxs)}
 .sidebar-tools{display:flex;flex-direction:column;gap:1px;padding:0 6px}
@@ -130,12 +130,12 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .empty-state p{font-size:var(--fs-sm)}
 .loading-state{text-align:center;padding:40px;color:var(--text-tertiary);font-size:var(--fs-sm);display:flex;align-items:center;justify-content:center;gap:8px}
 
-.proj-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:6px;overflow:hidden;transition:box-shadow .15s,background .2s,border-color .2s}
-.proj-card:hover{box-shadow:var(--shadow-sm)}
+.proj-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:6px;overflow:hidden;transition:box-shadow .2s,background .2s,border-color .2s;border-left:3px solid var(--card-accent,var(--border))}
+.proj-card:hover{box-shadow:var(--shadow-sm);border-color:var(--border-md)}
 
 /* Grid 5 colonnes :
    ctrl(36px) | nom(minmax 180px, 1fr) | barre(minmax 160px, 2fr) | meta(minmax 160px, 1.5fr) | actions(auto) */
-.pr-row{display:grid;grid-template-columns:36px minmax(180px,1fr) minmax(160px,2fr) minmax(160px,1.5fr) auto;align-items:center;padding:0 8px 0 4px;cursor:pointer;min-height:44px;gap:0}
+.pr-row{display:grid;grid-template-columns:36px minmax(180px,1fr) minmax(160px,2fr) minmax(160px,1.5fr) auto;align-items:center;padding:0 10px 0 4px;cursor:pointer;min-height:48px;gap:0}
 .pr-row:hover{background:var(--bg-hover)}
 .proj-card.expanded>.pr-row{background:var(--bg-hover)}
 
@@ -174,11 +174,11 @@ input:disabled{opacity:.5;cursor:not-allowed}
 
 /* .pr-status-block — gardé pour compatibilité sous-projets */
 /* sub-status-block — remplacé par sub-col-bar */
-.prog-wrap{width:100%}
-.prog-bar-bg{position:relative;width:100%;height:28px;border-radius:var(--radius-sm);background:var(--bg-hover);overflow:hidden;display:flex;align-items:center}
-.sub-status-block .prog-bar-bg{height:22px}
-.prog-fill-bg{position:absolute;inset:0;height:100%;border-radius:var(--radius-sm);transition:width .4s ease;opacity:.35}
-.prog-label{position:relative;z-index:1;font-size:var(--fs-xs);font-weight:700;letter-spacing:.02em;white-space:nowrap;padding:0 12px}
+.prog-wrap{width:100%;display:flex;align-items:center;gap:8px}
+.prog-bar-bg{position:relative;flex:1;height:6px;border-radius:3px;background:var(--bg-hover);overflow:hidden}
+.prog-fill-bg{position:absolute;inset:0;height:100%;border-radius:3px;transition:width .4s ease;opacity:.9}
+.prog-label{font-size:var(--fs-xxxs);font-weight:600;letter-spacing:.02em;white-space:nowrap;color:var(--text-secondary);min-width:0;flex-shrink:0}
+.prog-pct{font-size:var(--fs-xxxs);color:var(--text-tertiary);font-family:var(--font-mono);min-width:26px;text-align:right;flex-shrink:0}
 /* Garder status-badge pour le dashboard et dropdowns */
 .status-badge{font-size:var(--fs-xxs);font-weight:600;padding:3px 9px;border-radius:10px;white-space:nowrap;display:inline-block;cursor:pointer;transition:opacity .12s}
 .status-badge:hover{opacity:.75}
@@ -215,8 +215,8 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .section-hdr{font-size:var(--fs-xxxs);font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;display:flex;align-items:center;justify-content:space-between}
 
 /* Sub card — same logic as project card but indented */
-.sub-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:4px;overflow:hidden;transition:box-shadow .12s}
-.sub-card:hover{box-shadow:var(--shadow-sm)}
+.sub-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:4px;overflow:hidden;transition:box-shadow .2s,border-color .2s;border-left:2px solid var(--card-accent,var(--border))}
+.sub-card:hover{box-shadow:var(--shadow-sm);border-color:var(--border-md)}
 /* Grid 5 colonnes — alignées avec .pr-row */
 .sub-row{display:grid;grid-template-columns:36px minmax(160px,1fr) minmax(140px,2fr) minmax(120px,1.5fr) auto;align-items:center;padding:0 8px 0 4px;cursor:pointer;min-height:38px;gap:0}
 .sub-row:hover{background:var(--bg-hover)}
@@ -429,3 +429,45 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:28px
 /* ── Modal blocs ── */
 .modal-bloc{display:block}
 .input-readonly{background:var(--bg-hover)!important;color:var(--text-tertiary)!important;cursor:default;border-color:transparent!important;font-family:var(--font-mono,monospace);font-size:var(--fs-xs);letter-spacing:.03em}
+
+/* ── Visual refresh v9 ── */
+
+/* Status badge in prog bar */
+.prog-wrap .status-badge{font-size:var(--fs-xxxs);padding:2px 7px;cursor:default;pointer-events:none}
+
+/* Card left border per status — applied via --card-accent JS var */
+.proj-card[style*="--card-accent"]{border-left-width:3px;border-left-style:solid}
+
+/* Header refresh — warm accent instead of pure black */
+#header{background:linear-gradient(135deg,#1C1917 60%,#2A2318);border-bottom:1px solid rgba(201,151,58,.2)}
+.logo-icon{box-shadow:0 2px 8px rgba(201,151,58,.3)}
+.header-view-title{color:rgba(245,240,232,.4)}
+
+/* Topbar subtle elevation */
+#topbar{box-shadow:0 1px 0 var(--border),0 2px 8px rgba(0,0,0,.04)}
+
+/* Sidebar section header breathing room */
+.cat-section{padding:4px 0 8px}
+
+/* pr-col-bar vertical alignment with new slim bar */
+.pr-col-bar{padding:0 12px}
+.sub-col-bar{padding:0 12px}
+
+/* Card hover — subtle lift */
+.proj-card:hover{transform:translateY(-1px);box-shadow:0 3px 12px rgba(0,0,0,.08)}
+.proj-card{transition:box-shadow .2s,border-color .2s,transform .15s,background .2s}
+
+/* Expanded card — no lift */
+.proj-card.expanded{transform:none}
+
+/* Sub-card indent marker */
+.subs-section{padding:8px 14px 8px 16px}
+
+/* Note items — slightly warmer */
+.note-item{background:var(--bg-detail);border-radius:var(--radius-md)}
+
+/* Modal inputs — focus ring */
+.fg input:focus,.fg select:focus,.fg textarea:focus{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 20%,transparent)}
+
+/* Dark mode card hover */
+[data-theme="dark"] .proj-card:hover{box-shadow:0 3px 16px rgba(0,0,0,.35)}
