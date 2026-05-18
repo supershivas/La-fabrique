@@ -806,8 +806,8 @@ async function confirmDeleteSub(parentId,subId){
 // cas: 'new-proj' | 'edit-proj' | 'new-sub' | 'edit-sub'
 function showModalFields(cas){
   const blocs={
-    'bloc-num'    : ['new-proj','new-sub'],
-    'bloc-num-ro' : ['edit-proj','edit-sub'],
+    'bloc-num'    : ['new-proj','edit-proj','new-sub'],
+    'bloc-num-ro' : ['edit-sub'],
     'bloc-cat'    : ['new-proj'],
     'bloc-meta'   : ['new-proj','edit-proj'],
     'bloc-imp'    : ['new-proj','edit-proj'],
@@ -848,12 +848,20 @@ function syncSlider(status){
   g('prog-hint').textContent=`Auto : ${auto}% pour "${STATUS_LABELS[status]}" — ajustable`;
 }
 
-function openNewProject(){resetModal();showModalFields('new-proj');syncSlider('ready');openModal('Nouveau projet','ti-folder-plus');}
+function openNewProject(){
+  resetModal();showModalFields('new-proj');syncSlider('ready');
+  const year=new Date().getFullYear();
+  sv('f-num',`${year}_`);
+  openModal('Nouveau projet','ti-folder-plus');
+  // Focus at end of prefilled number
+  const numEl=g('f-num');
+  if(numEl){numEl.focus();numEl.setSelectionRange(numEl.value.length,numEl.value.length);}
+}
 
 function openEdit(id){
   resetModal();showModalFields('edit-proj');editingId=id;sliderManual=true;
   const p=projects.find(x=>x.id===id);if(!p){toast('Projet introuvable','error');return;}
-  sv('f-num-ro',p.number);sv('f-name',p.name);sv('f-editor',p.editor);sv('f-client',p.client);
+  sv('f-num',p.number);sv('f-name',p.name);sv('f-editor',p.editor);sv('f-client',p.client);
   g('f-status-m').value=p.status;g('f-imp').value=p.importance||'medium';
   g('f-progress').value=p.progress;g('f-progress-val').textContent=`${p.progress}%`;
   if(p.progress===100||p.status==='done')g('f-progress').style.accentColor='#639922';
@@ -960,9 +968,17 @@ async function handleSave(){
       const newId=await saveSubproject(editingSubParentId,{number:num,name,status,progress},true);
       if(newId){parent.subprojects.push({id:newId,number:num,name,status,progress,notes:[]});parent.updatedAt=now;await saveProject({...parent},false);}toast('Sous-projet créé ✓');
     } else if(editingId!==null){
-      if(!name){showFieldError('f-name','Nom requis');return;}
+      const editNum=gv('f-num').trim();
+      let editErr=false;
+      if(!editNum){showFieldError('f-num','Numéro requis');editErr=true;}
+      else if(editNum!==projects.find(x=>x.id===editingId)?.number){
+        const dup=projects.find(p=>p.number===editNum&&p.id!==editingId);
+        if(dup){showFieldError('f-num',`N° déjà utilisé par "${esc(dup.name)}"`);editErr=true;}
+      }
+      if(!name){showFieldError('f-name','Nom requis');editErr=true;}
+      if(editErr)return;
       const p=projects.find(x=>x.id===editingId);if(!p){toast('Projet introuvable','error');return;}
-      const wasNotDone=p.status!=='done';Object.assign(p,{name,status,progress,date,deadline,editor,client,importance,cat,updatedAt:now});
+      const wasNotDone=p.status!=='done';Object.assign(p,{number:editNum,name,status,progress,date,deadline,editor,client,importance,cat,updatedAt:now});
       if(status==='done'&&wasNotDone)p.ended=now;if(status!=='done')p.ended=null;
       await saveProject({...p},false);
       if(noteText){const nd=await saveNote(p.id,noteText);if(nd)p.notes.push({id:nd.id,date:now,text:noteText});}
@@ -1024,6 +1040,79 @@ function renderDashboard(){
 /* ══════════════════════════════════════════════════════════
    AUTH
    ══════════════════════════════════════════════════════════ */
+
+/* ── Reset password ── */
+function openResetScreen(){
+  const box=g('login-box');if(!box)return;
+  box.innerHTML=`
+    <div class="login-logo"><div class="logo-icon">✦</div><div><div style="font-size:1.1rem;font-weight:600;color:var(--text-primary)">La fabrique</div><div style="font-size:.7rem;color:var(--text-tertiary);letter-spacing:.05em;text-transform:uppercase">Réinitialisation</div></div></div>
+    <div id="reset-info" style="font-size:var(--fs-xxs);color:var(--text-secondary);margin-bottom:12px;line-height:1.5">Saisis ton adresse email pour recevoir un lien de réinitialisation.</div>
+    <div id="login-error" class="login-error" style="display:none"></div>
+    <div class="fg"><label>Email</label><input type="email" id="reset-email" placeholder="vous@exemple.com" autocomplete="email"/></div>
+    <button id="btn-send-reset" class="btn-primary" style="width:100%;margin-top:4px">Envoyer le lien</button>
+    <div style="text-align:center;margin-top:10px"><a href="#" id="back-to-login" style="font-size:var(--fs-xxs);color:var(--text-tertiary)">← Retour à la connexion</a></div>
+  `;
+  document.getElementById('btn-send-reset')?.addEventListener('click',sendResetEmail);
+  document.getElementById('reset-email')?.addEventListener('keydown',e=>{if(e.key==='Enter')sendResetEmail();});
+  document.getElementById('back-to-login')?.addEventListener('click',e=>{e.preventDefault();renderLoginScreen();});
+  document.getElementById('reset-email')?.focus();
+}
+
+async function sendResetEmail(){
+  const email=document.getElementById('reset-email')?.value.trim();
+  const errEl=document.getElementById('login-error');
+  if(!email){if(errEl){errEl.textContent='Saisis ton adresse email.';errEl.style.display='block';}return;}
+  const btn=document.getElementById('btn-send-reset');
+  if(btn){btn.disabled=true;btn.textContent='Envoi…';}
+  const{error}=await db.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+'?reset=1'});
+  if(btn){btn.disabled=false;btn.textContent='Envoyer le lien';}
+  if(error){if(errEl){errEl.textContent=error.message;errEl.style.display='block';}}
+  else{
+    const box=g('login-box');if(box)box.innerHTML=`
+      <div class="login-logo"><div class="logo-icon">✦</div></div>
+      <div style="text-align:center;padding:12px 0">
+        <div style="font-size:1.5rem;margin-bottom:8px">✉️</div>
+        <div style="font-weight:600;margin-bottom:6px">Email envoyé !</div>
+        <div style="font-size:var(--fs-xxs);color:var(--text-secondary);line-height:1.5">Consulte ta boîte mail et clique sur le lien pour définir un nouveau mot de passe.</div>
+        <a href="#" id="back-to-login2" style="display:inline-block;margin-top:14px;font-size:var(--fs-xxs);color:var(--text-tertiary)">← Retour à la connexion</a>
+      </div>
+    `;
+    document.getElementById('back-to-login2')?.addEventListener('click',e=>{e.preventDefault();renderLoginScreen();});
+  }
+}
+
+function openNewPasswordScreen(){
+  const box=g('login-box');if(!box)return;
+  box.innerHTML=`
+    <div class="login-logo"><div class="logo-icon">✦</div><div><div style="font-size:1.1rem;font-weight:600;color:var(--text-primary)">La fabrique</div><div style="font-size:.7rem;color:var(--text-tertiary);letter-spacing:.05em;text-transform:uppercase">Nouveau mot de passe</div></div></div>
+    <div id="login-error" class="login-error" style="display:none"></div>
+    <div class="fg"><label>Nouveau mot de passe</label><input type="password" id="new-password" placeholder="8 caractères minimum" autocomplete="new-password"/></div>
+    <div class="fg"><label>Confirmer</label><input type="password" id="new-password2" placeholder="Répète le mot de passe" autocomplete="new-password"/></div>
+    <button id="btn-update-pwd" class="btn-primary" style="width:100%;margin-top:4px">Enregistrer</button>
+  `;
+  document.getElementById('btn-update-pwd')?.addEventListener('click',updatePassword);
+  document.getElementById('new-password2')?.addEventListener('keydown',e=>{if(e.key==='Enter')updatePassword();});
+  document.getElementById('new-password')?.focus();
+}
+
+async function updatePassword(){
+  const p1=document.getElementById('new-password')?.value;
+  const p2=document.getElementById('new-password2')?.value;
+  const errEl=document.getElementById('login-error');
+  if(!p1||p1.length<8){if(errEl){errEl.textContent='Mot de passe trop court (8 caractères minimum).';errEl.style.display='block';}return;}
+  if(p1!==p2){if(errEl){errEl.textContent='Les mots de passe ne correspondent pas.';errEl.style.display='block';}return;}
+  const btn=document.getElementById('btn-update-pwd');
+  if(btn){btn.disabled=true;btn.textContent='Enregistrement…';}
+  const{error}=await db.auth.updateUser({password:p1});
+  if(btn){btn.disabled=false;btn.textContent='Enregistrer';}
+  if(error){if(errEl){errEl.textContent=error.message;errEl.style.display='block';}}
+  else{
+    // Clean URL then redirect to app
+    window.history.replaceState(null,'',window.location.pathname);
+    await checkAuth();
+  }
+}
+
 function renderLoginScreen(){
   document.body.innerHTML=`
     <div id="login-screen">
@@ -1033,6 +1122,7 @@ function renderLoginScreen(){
         <div class="fg"><label>Email</label><input type="email" id="auth-email" placeholder="vous@exemple.com" autocomplete="email"/></div>
         <div class="fg"><label>Mot de passe</label><input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password"/></div>
         <button id="auth-btn" class="btn-primary" style="width:100%;justify-content:center;height:38px;font-size:var(--fs-sm);margin-top:4px">Se connecter</button>
+        <div style="text-align:center;margin-top:8px"><a href="#" id="btn-forgot-pwd" style="font-size:var(--fs-xxs);color:var(--text-tertiary)">Mot de passe oublié ?</a></div>
         <p id="auth-switch" style="text-align:center;font-size:var(--fs-xxs);color:var(--text-tertiary);margin-top:10px;cursor:pointer">Pas encore de compte ? <span style="color:var(--accent);font-weight:500">Créer un compte</span></p>
         <p id="forgot-pw"   style="text-align:center;font-size:var(--fs-xxxs);color:var(--text-tertiary);margin-top:6px;cursor:pointer">Mot de passe oublié ?</p>
       </div>
@@ -1056,7 +1146,10 @@ function renderLoginScreen(){
 /* ── Auth state listener ── */
 function initAuthListener(){
   db.auth.onAuthStateChange((event,session)=>{
-    if(event==='SIGNED_OUT'||(event==='TOKEN_REFRESHED'&&!session)){
+    if(event==='PASSWORD_RECOVERY'){
+      renderLoginScreen();
+      openNewPasswordScreen();
+    } else if(event==='SIGNED_OUT'||(event==='TOKEN_REFRESHED'&&!session)){
       currentUser=null;projects=[];
       toast('Session expirée, reconnectez-vous','error');
       setTimeout(()=>renderLoginScreen(),1500);
@@ -1067,6 +1160,15 @@ function initAuthListener(){
 }
 
 async function checkAuth(){
+  // Intercept password reset token from URL hash
+  const hash=window.location.hash;
+  if(hash&&hash.includes('access_token')&&hash.includes('type=recovery')){
+    renderLoginScreen();
+    openNewPasswordScreen();
+    // Let Supabase handle the session from the hash
+    await db.auth.getSession();
+    return;
+  }
   const{data:{session}}=await db.auth.getSession();
   if(session?.user){currentUser=session.user;loadOrder();applyPrefs();fetchProjects();const logout=g('btn-logout');if(logout)logout.title=currentUser.email;}
   else renderLoginScreen();
