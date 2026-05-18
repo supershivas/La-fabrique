@@ -158,10 +158,16 @@ input:disabled{opacity:.5;cursor:not-allowed}
 /* Col 5 — actions */
 .pr-col-actions{display:flex;align-items:center;gap:4px;padding:0 0 0 4px}
 .pr-col-actions .imp-dot{margin-right:8px}
+.pr-col-actions .imp-tag{margin-right:6px}
 .tag-chip{font-size:var(--fs-xxxs);color:var(--text-secondary);display:inline-flex;align-items:center;gap:2px;white-space:nowrap}
 .tag-chip.dl-warn{color:var(--dl-warn);font-weight:500}.tag-chip.dl-over{color:var(--dl-over);font-weight:500}
 .imp-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0;cursor:default}
 .imp-low{background:var(--imp-low)}.imp-med{background:var(--imp-med)}.imp-high{background:var(--imp-high)}
+/* importance tags */
+.imp-tag{display:inline-flex;align-items:center;padding:1px 7px;border-radius:20px;font-size:var(--fs-xxxs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:default;flex-shrink:0}
+.imp-tag-low{background:color-mix(in srgb,var(--imp-low) 15%,transparent);color:var(--imp-low);border:1px solid color-mix(in srgb,var(--imp-low) 35%,transparent)}
+.imp-tag-med{background:color-mix(in srgb,var(--imp-med) 15%,transparent);color:var(--imp-med);border:1px solid color-mix(in srgb,var(--imp-med) 35%,transparent)}
+.imp-tag-high{background:color-mix(in srgb,var(--imp-high) 15%,transparent);color:var(--imp-high);border:1px solid color-mix(in srgb,var(--imp-high) 35%,transparent)}
 
 /* .pr-status-block — gardé pour compatibilité sous-projets */
 /* sub-status-block — remplacé par sub-col-bar */
