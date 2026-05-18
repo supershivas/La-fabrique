@@ -213,17 +213,29 @@ function openCtxMenu(anchorEl, items){
 function closeCtxMenu(){const m=g('ctx-menu');if(m)m.remove();}
 
 async function handleCtxAction(action,pid,sid){
-  switch(action){
-    case 'add-sub':      openNewSub(pid);break;
-    case 'add-note':     openAddNote(pid);break;
-    case 'dup-proj':     await dupProject(pid);break;
-    case 'archive-proj': await toggleArchive(pid);break;
-    case 'delete-proj':  await confirmDelete(pid);break;
-    case 'add-sub-note': openAddSubNote(pid,sid);break;
-    case 'dup-sub':      await dupSub(pid,sid);break;
-    case 'archive-sub':  toast('Archivage sous-projet non disponible','info');break;
-    case 'delete-sub':   await confirmDeleteSub(pid,sid);break;
+  const asyncActions=['dup-proj','archive-proj','dup-sub'];
+  if(asyncActions.includes(action))setCardLoading(pid,true);
+  try{
+    switch(action){
+      case 'add-sub':      openNewSub(pid);break;
+      case 'add-note':     openAddNote(pid);break;
+      case 'dup-proj':     await dupProject(pid);break;
+      case 'archive-proj': await toggleArchive(pid);break;
+      case 'delete-proj':  await confirmDelete(pid);break;
+      case 'add-sub-note': openAddSubNote(pid,sid);break;
+      case 'dup-sub':      await dupSub(pid,sid);break;
+      case 'archive-sub':  toast('Archivage sous-projet non disponible','info');break;
+      case 'delete-sub':   await confirmDeleteSub(pid,sid);break;
+    }
+  }finally{
+    if(asyncActions.includes(action))setCardLoading(pid,false);
   }
+}
+function setCardLoading(pid,on){
+  const card=g('project-list')?.querySelector(`[data-pid="${pid}"].proj-card`);
+  if(!card)return;
+  card.style.opacity=on?'.5':'';
+  card.style.pointerEvents=on?'none':'';
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -550,7 +562,7 @@ function buildProjectCard(p,draggable=false){
         <span class="proj-num">${esc(p.number)}</span>
         <span class="proj-name">${esc(p.name)}</span>
       </div>
-      <div class="pr-col-bar" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()">
+      <div class="pr-col-bar" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()" title="Cliquer pour changer le statut">
         ${pb(p.progress,p.status)}
       </div>
       <div class="pr-col-meta">
@@ -594,7 +606,7 @@ function buildSubCard(s,parent){
         <span class="sub-num">${esc(s.number)}</span>
         <span class="sub-name">${esc(s.name)}</span>
       </div>
-      <div class="sub-col-bar" data-action="inline-status-sub" data-pid="${parent.id}" data-sid="${s.id}" onclick="event.stopPropagation()">
+      <div class="sub-col-bar" data-action="inline-status-sub" data-pid="${parent.id}" data-sid="${s.id}" onclick="event.stopPropagation()" title="Cliquer pour changer le statut">
         ${pb(s.progress,s.status)}
       </div>
       <div class="sub-col-meta">
@@ -1086,6 +1098,52 @@ document.addEventListener('DOMContentLoaded',()=>{
   g('filter-imp')?.addEventListener('change',renderView);
   g('sort-by')?.addEventListener('change',renderView);
   g('filter-editor')?.addEventListener('change',renderView);
+
+  /* ── Filter drawer (mobile) ── */
+  function syncDrawerSelects(){
+    // Populate mobile selects with same options as desktop selects
+    ['status','imp','editor'].forEach(k=>{
+      const src=g('filter-'+k),dst=g('filter-'+k+'-m');
+      if(!src||!dst)return;
+      dst.innerHTML=src.innerHTML;
+      dst.value=src.value;
+    });
+    const sb=g('sort-by'),sbm=g('sort-by-m');
+    if(sb&&sbm){sbm.innerHTML=sb.innerHTML;sbm.value=sb.value;}
+  }
+  function openFilterDrawer(){
+    syncDrawerSelects();
+    g('filter-drawer')?.classList.add('open');
+    g('filter-drawer-overlay')?.classList.add('open');
+    g('btn-filter-mobile')?.classList.add('filter-active');
+  }
+  function closeFilterDrawer(){
+    g('filter-drawer')?.classList.remove('open');
+    g('filter-drawer-overlay')?.classList.remove('open');
+    g('btn-filter-mobile')?.classList.remove('filter-active');
+  }
+  function applyDrawerFilters(){
+    ['status','imp','editor'].forEach(k=>{
+      const src=g('filter-'+k+'-m'),dst=g('filter-'+k);
+      if(src&&dst)dst.value=src.value;
+    });
+    const sbm=g('sort-by-m'),sb=g('sort-by');
+    if(sbm&&sb)sb.value=sbm.value;
+    // update filter-active badge
+    const hasFilter=g('filter-status')?.value||g('filter-imp')?.value||g('filter-editor')?.value;
+    g('btn-filter-mobile')?.classList.toggle('filter-active',!!hasFilter);
+    renderView();
+    closeFilterDrawer();
+  }
+  g('btn-filter-mobile')?.addEventListener('click',openFilterDrawer);
+  g('filter-drawer-overlay')?.addEventListener('click',()=>{applyDrawerFilters();});
+  g('filter-drawer-reset')?.addEventListener('click',()=>{
+    ['filter-status-m','filter-imp-m','filter-editor-m'].forEach(id=>{const el=g(id);if(el)el.value='';});
+    applyDrawerFilters();
+  });
+  ['filter-status-m','filter-imp-m','filter-editor-m','sort-by-m'].forEach(id=>{
+    g(id)?.addEventListener('change',applyDrawerFilters);
+  });
 
   g('btn-dashboard')?.addEventListener('click',()=>{showDashboard=!showDashboard;g('btn-dashboard')?.classList.toggle('active',showDashboard);renderView();});
   g('btn-export')?.addEventListener('click',exportCSV);
