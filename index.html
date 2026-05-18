@@ -131,51 +131,76 @@
     <div id="modal" class="resizable-modal">
       <div class="modal-resize-handle"></div>
       <h2 id="modal-title"><i class="ti ti-folder"></i>Nouveau projet</h2>
-      <div class="form-row">
-        <div class="fg"><label>Numéro</label><input type="text" id="f-num" placeholder="2026_0001"/></div>
-        <div class="fg"><label>Catégorie</label>
-          <select id="f-cat"><option value="pro">Pro</option><option value="perso">Perso</option></select>
+
+      <!-- bloc-num : nouveau projet / nouveau sous-projet -->
+      <div class="modal-bloc" id="bloc-num">
+        <div class="form-row">
+          <div class="fg"><label>Numéro</label><input type="text" id="f-num" placeholder="2026_0001"/></div>
+          <div class="fg" id="bloc-cat"><label>Catégorie</label>
+            <select id="f-cat"><option value="pro">Pro</option><option value="perso">Perso</option></select>
+          </div>
         </div>
       </div>
-      <div class="fg"><label>Nom du projet</label><input type="text" id="f-name" placeholder="Nom du projet"/></div>
-      <div class="form-row">
-        <div class="fg"><label>Éditeur</label>
-          <div class="ac-wrap"><input type="text" id="f-editor" placeholder="Éditeur…" autocomplete="off"/>
-          <div id="editor-suggest" class="ac-suggest"></div></div>
+
+      <!-- bloc-num-readonly : modifier projet / modifier sous-projet -->
+      <div class="modal-bloc" id="bloc-num-ro">
+        <div class="fg"><label>Numéro</label><input type="text" id="f-num-ro" readonly tabindex="-1" class="input-readonly"/></div>
+      </div>
+
+      <div class="modal-bloc" id="bloc-name">
+        <div class="fg"><label id="f-name-label">Nom du projet</label><input type="text" id="f-name" placeholder="Nom du projet"/></div>
+      </div>
+
+      <!-- bloc-meta : projet uniquement (éditeur, client, dates) -->
+      <div class="modal-bloc" id="bloc-meta">
+        <div class="form-row">
+          <div class="fg"><label>Éditeur</label>
+            <div class="ac-wrap"><input type="text" id="f-editor" placeholder="Éditeur…" autocomplete="off"/>
+            <div id="editor-suggest" class="ac-suggest"></div></div>
+          </div>
+          <div class="fg"><label>Client(s) <span class="fg-hint">virgule = plusieurs</span></label>
+            <div class="ac-wrap"><input type="text" id="f-client" placeholder="Client A, Client B…" autocomplete="off"/>
+            <div id="client-suggest" class="ac-suggest"></div></div>
+          </div>
         </div>
-        <div class="fg"><label>Client(s) <span class="fg-hint">virgule = plusieurs</span></label>
-          <div class="ac-wrap"><input type="text" id="f-client" placeholder="Client A, Client B…" autocomplete="off"/>
-          <div id="client-suggest" class="ac-suggest"></div></div>
+        <div class="form-row">
+          <div class="fg"><label>Date de début</label><input type="date" id="f-date"/></div>
+          <div class="fg"><label>☠ Deadline</label><input type="date" id="f-deadline"/></div>
         </div>
       </div>
-      <div class="form-row">
-        <div class="fg"><label>Statut</label>
-          <select id="f-status-m">
-            <option value="ready">Ready to start</option><option value="ongoing">Ongoing</option>
-            <option value="review">In review</option><option value="sent">Sent to client</option>
-            <option value="done">Done</option><option value="hold">On hold</option>
-          </select>
+
+      <!-- bloc-status : tous les cas -->
+      <div class="modal-bloc" id="bloc-status">
+        <div class="form-row">
+          <div class="fg"><label>Statut</label>
+            <select id="f-status-m">
+              <option value="ready">Ready to start</option><option value="ongoing">Ongoing</option>
+              <option value="review">In review</option><option value="sent">Sent to client</option>
+              <option value="done">Done</option><option value="hold">On hold</option>
+            </select>
+          </div>
+          <div class="fg" id="bloc-imp"><label>Importance</label>
+            <select id="f-imp"><option value="medium">Medium</option><option value="high">High</option><option value="low">Low</option></select>
+          </div>
         </div>
-        <div class="fg"><label>Importance</label>
-          <select id="f-imp"><option value="medium">Medium</option><option value="high">High</option><option value="low">Low</option></select>
+        <div class="fg">
+          <label>Progression</label>
+          <div class="slider-wrap">
+            <input type="range" id="f-progress" min="0" max="100" step="1" value="0"/>
+            <span id="f-progress-val" class="slider-val">0%</span>
+          </div>
+          <div id="prog-hint" class="prog-hint">Auto selon le statut — ajustable manuellement</div>
         </div>
       </div>
-      <div class="fg">
-        <label>Progression</label>
-        <div class="slider-wrap">
-          <input type="range" id="f-progress" min="0" max="100" step="1" value="0"/>
-          <span id="f-progress-val" class="slider-val">0%</span>
+
+      <!-- bloc-note : projet uniquement -->
+      <div class="modal-bloc" id="bloc-note">
+        <div class="fg">
+          <label id="note-label">Note initiale</label>
+          <textarea id="f-note" placeholder="Ajouter une note…"></textarea>
         </div>
-        <div id="prog-hint" class="prog-hint">Auto selon le statut — ajustable manuellement</div>
       </div>
-      <div class="form-row">
-        <div class="fg"><label>Date de début</label><input type="date" id="f-date"/></div>
-        <div class="fg"><label>☠ Deadline</label><input type="date" id="f-deadline"/></div>
-      </div>
-      <div class="fg" id="note-field-wrap">
-        <label id="note-label">Note initiale</label>
-        <textarea id="f-note" placeholder="Ajouter une note…"></textarea>
-      </div>
+
       <div class="modal-footer">
         <button id="btn-cancel" class="btn-ghost">Annuler</button>
         <button id="btn-save"   class="btn-primary">Enregistrer</button>
