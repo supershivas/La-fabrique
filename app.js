@@ -375,6 +375,15 @@ function renderSidebar(){
   const logout=g('btn-logout');if(logout&&currentUser)logout.title=currentUser.email;
 }
 
+
+function updateClearBtn(){
+  const anyFilter=g('filter-status')?.value||g('filter-imp')?.value||g('filter-editor')?.value||g('search')?.value;
+  const cb=g('btn-clear-filters');
+  if(cb)cb.style.display=anyFilter?'inline-flex':'none';
+  ['filter-status','filter-imp','filter-editor'].forEach(id=>{
+    const el=g(id);if(el)el.classList.toggle('filter-on',!!el.value);
+  });
+}
 function renderView(){
   const title=g('topbar-title');if(title)title.textContent=`${selectedCat==='pro'?'Pro':'Perso'} · ${selectedYear}${showArchived?' · Archives':showDashboard?' · Stats':''}`;
   if(showDashboard)renderDashboard();else renderProjects();
@@ -472,8 +481,8 @@ function clearFilters(){
   ['filter-status','filter-imp','filter-editor'].forEach(id=>{
     const el=g(id);if(el){el.value='';el.classList.remove('filter-on');}
   });
-  const cb=g('btn-clear-filters');if(cb)cb.style.display='none';
   renderView();
+  updateClearBtn();
 }
 function renderProjects(){
   const list=getFiltered(),container=g('project-list');if(!container)return;
@@ -481,14 +490,7 @@ function renderProjects(){
   const rc=g('result-count');
   const total=projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&(showArchived?p.archived:!p.archived)).length;
   if(rc){rc.textContent=list.length<total?`${list.length} / ${total}`:list.length>0?`${list.length}`:'';rc.style.display=list.length<total?'inline':'none';}
-  // Active state on filter selects
-  ['filter-status','filter-imp','filter-editor'].forEach(id=>{
-    const el=g(id);if(!el)return;
-    el.classList.toggle('filter-on',!!el.value);
-  });
-  // Show/hide clear button
-  const anyFilter=g('filter-status')?.value||g('filter-imp')?.value||g('filter-editor')?.value||g('search')?.value;
-  const cb=g('btn-clear-filters');if(cb)cb.style.display=anyFilter?'inline-flex':'none';
+  updateClearBtn();
   // Refresh editor filter options
   const edSel=g('filter-editor');
   if(edSel){
@@ -1117,11 +1119,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     else g('prog-hint').textContent='Valeur personnalisée';
   });
 
-  g('search')?.addEventListener('input',renderView);
-  g('filter-status')?.addEventListener('change',renderView);
-  g('filter-imp')?.addEventListener('change',renderView);
+  g('search')?.addEventListener('input',()=>{renderView();updateClearBtn();});
+  g('filter-status')?.addEventListener('change',()=>{renderView();updateClearBtn();});
+  g('filter-imp')?.addEventListener('change',()=>{renderView();updateClearBtn();});
   g('sort-by')?.addEventListener('change',renderView);
-  g('filter-editor')?.addEventListener('change',renderView);
+  g('filter-editor')?.addEventListener('change',()=>{renderView();updateClearBtn();});
   g('btn-clear-filters')?.addEventListener('click',clearFilters);
 
   /* ── Filter drawer (mobile) ── */
