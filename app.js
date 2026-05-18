@@ -117,7 +117,7 @@ function setDbStatus(state,text){
 }
 
 /* ── Toast ── */
-function toast(msg,type='success'){
+function toast(msg,type='success',action=null){
   let c=g('toast-container');
   if(!c){c=document.createElement('div');c.id='toast-container';c.style.cssText='position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:6px;pointer-events:none;';document.body.appendChild(c);}
   const bg=type==='success'?'var(--s-done-bg)':type==='error'?'var(--s-sent-bg)':'var(--s-ongoing-bg)';
@@ -125,8 +125,13 @@ function toast(msg,type='success'){
   const ic=type==='success'?'ti-circle-check':type==='error'?'ti-circle-x':'ti-info-circle';
   const t=document.createElement('div');
   t.style.cssText=`display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:8px;background:${bg};color:${fg};font-size:.8rem;font-weight:500;box-shadow:var(--shadow-md);animation:slideIn .2s ease;pointer-events:all;`;
-  t.innerHTML=`<i class="ti ${ic}" style="font-size:1rem"></i>${msg}`;c.appendChild(t);
-  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300);},2800);
+  const actionHtml=action?`<button style="margin-left:8px;padding:2px 8px;border-radius:4px;background:transparent;border:1px solid ${fg};color:${fg};font-size:.75rem;font-weight:600;cursor:pointer;opacity:.85" onclick="this.closest('[data-toast]').remove()">${action.label}</button>`:'';
+  t.setAttribute('data-toast','');
+  t.innerHTML=`<i class="ti ${ic}" style="font-size:1rem"></i><span style="flex:1">${msg}</span>${actionHtml}`;
+  c.appendChild(t);
+  if(action){t.querySelector('button')?.addEventListener('click',async e=>{e.stopPropagation();await action.cb();t.remove();});}
+  const dur=action?4500:2800;
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300);},dur);
 }
 
 /* ── Unique lists (client aware of comma) ── */
@@ -162,9 +167,15 @@ function setupAC(inputId,suggestId,getItems,opts={}){
 /* ── Export CSV ── */
 function exportCSV(){
   const list=getFiltered();
-  const headers=['Numéro','Nom','Catégorie','Statut','%','Importance','Éditeur','Client(s)','Début','Deadline','Terminé','Mis à jour'];
-  const rows=list.map(p=>[p.number,p.name,p.cat,STATUS_LABELS[p.status]||p.status,p.progress+'%',IMP_LBL[p.importance]||p.importance,p.editor||'',p.client||'',toEU(p.date),toEU(p.deadline),toEU(p.ended),toEU(p.updatedAt)]);
-  const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const headers=['Type','Numéro','Nom','Catégorie','Statut','%','Importance','Éditeur','Client(s)','Début','Deadline','Terminé','Mis à jour'];
+  const rows=[];
+  list.forEach(p=>{
+    rows.push(['Projet',p.number,p.name,p.cat,STATUS_LABELS[p.status]||p.status,p.progress+'%',IMP_LBL[p.importance]||p.importance,p.editor||'',p.client||'',toEU(p.date),toEU(p.deadline),toEU(p.ended),toEU(p.updatedAt)]);
+    (p.subprojects||[]).forEach(s=>{
+      rows.push(['↳ Sous-projet',s.number,s.name,p.cat,STATUS_LABELS[s.status]||s.status,s.progress+'%','','','','','',toEU(s.ended),'']);
+    });
+  });
+  const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v==null?"":v).replace(/"/g,'""')}"`).join(",")).join("\n");
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`lafabrique_${selectedCat}_${selectedYear}_${todayISO()}.csv`;a.click();URL.revokeObjectURL(url);
   toast('Export CSV ✓');
@@ -706,7 +717,29 @@ async function dupProject(id){
   const src=projects.find(x=>x.id===id);if(!src)return;
   const newP={...src,id:undefined,number:src.number+'_copie',name:src.name+' (copie)',ended:null,archived:false,updatedAt:todayISO(),subprojects:[],notes:[]};
   const newId=await saveProject({...newP,year:src.year},true);
-  if(newId){newP.id=newId;projects.push(newP);toast('Projet dupliqué ✓');renderSidebar();renderProjects();}
+  if(!newId)return;
+  newP.id=newId;
+  // Dupliquer les sous-projets
+  for(const s of (src.subprojects||[])){
+    const sid=await saveSubproject(newId,{number:s.number,name:s.name,status:s.status,progress:s.progress},true);
+    if(sid){
+      const newSub={id:sid,number:s.number,name:s.name,status:s.status,progress:s.progress,notes:[]};
+      // Dupliquer les notes du sous-projet
+      for(const n of (s.notes||[])){
+        const nd=await saveNote(newId,n.text,sid);
+        if(nd)newSub.notes.push({id:nd.id,date:nd.created_at||todayISO(),text:n.text});
+      }
+      newP.subprojects.push(newSub);
+    }
+  }
+  // Dupliquer les notes du projet
+  for(const n of (src.notes||[])){
+    const nd=await saveNote(newId,n.text);
+    if(nd)newP.notes.push({id:nd.id,date:nd.created_at||todayISO(),text:n.text});
+  }
+  projects.push(newP);
+  toast(`Projet dupliqué ✓ (${newP.subprojects.length} sous-projet${newP.subprojects.length>1?'s':''})`);
+  renderSidebar();renderProjects();
 }
 async function dupSub(parentId,subId){
   const parent=projects.find(x=>x.id===parentId);const src=parent?.subprojects.find(x=>x.id===subId);if(!src)return;
@@ -714,8 +747,16 @@ async function dupSub(parentId,subId){
   if(newId){parent.subprojects.push({id:newId,number:src.number+'b',name:src.name+' (copie)',status:src.status,progress:src.progress,notes:[]});toast('Sous-projet dupliqué ✓');renderProjects();}
 }
 async function toggleArchive(id){
-  const p=projects.find(x=>x.id===id);if(!p)return;p.archived=!p.archived;
-  await saveProject({...p},false);toast(p.archived?'Projet archivé':'Projet désarchivé');renderSidebar();renderView();
+  const p=projects.find(x=>x.id===id);if(!p)return;
+  const wasArchived=p.archived;
+  p.archived=!wasArchived;
+  await saveProject({...p},false);
+  renderSidebar();renderView();
+  toast(
+    wasArchived?'Projet désarchivé':'Projet archivé',
+    'info',
+    {label:'Annuler',cb:async()=>{p.archived=wasArchived;await saveProject({...p},false);renderSidebar();renderView();}}
+  );
 }
 async function confirmDelete(id){
   const p=projects.find(x=>x.id===id);
