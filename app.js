@@ -861,6 +861,18 @@ function resetModal(){
   g('editor-suggest').style.display='none';g('client-suggest').style.display='none';
   clearFieldErrors();
 }
+
+/* ── Field change highlight ── */
+function watchFieldChanges(){
+  const modal=g('modal');if(!modal)return;
+  modal.querySelectorAll('input:not([readonly]),select,textarea').forEach(el=>{
+    const orig=el.value;
+    el.classList.remove('field-changed');
+    const handler=()=>el.classList.toggle('field-changed',el.value!==orig);
+    el.addEventListener('input',handler);
+    el.addEventListener('change',handler);
+  });
+}
 function openModal(title,icon='ti-folder'){g('modal-title').innerHTML=`<i class="ti ${icon}"></i>${title}`;g('modal-overlay').classList.add('open');}
 function closeModal(){g('modal-overlay').classList.remove('open');resetModal();}
 function syncSlider(status){
@@ -890,6 +902,7 @@ function openEdit(id){
   sv('f-date',p.date||'');sv('f-deadline',p.deadline||'');g('f-cat').value=p.cat;
   g('note-label').textContent='Nouvelle note';g('f-note').placeholder='Ajouter une note…';
   openModal(`Modifier — ${esc(p.number)}`,'ti-edit');
+  watchFieldChanges();
 }
 function openNoteModal(title,cb){
   g('note-modal-title').innerHTML=`<i class="ti ti-notes"></i>${title}`;
@@ -936,6 +949,7 @@ function openEditSub(parentId,subId){
   g('f-status-m').value=s.status;g('f-progress').value=s.progress;g('f-progress-val').textContent=`${s.progress}%`;
   if(s.progress===100||s.status==='done')g('f-progress').style.accentColor='#639922';
   openModal(`Modifier — ${esc(s.number)}`,'ti-edit');
+  watchFieldChanges();
 }
 function showFieldError(inputId,msg){
   const el=g(inputId);if(!el)return;
@@ -975,12 +989,13 @@ async function handleSave(){
       toast('Note ajoutée ✓');closeModal();renderView();return;
     }
     if(editingSubParentId!==null&&editingId!==null){
+      const subNum=gv('f-num-ro')||num;
       let err=false;
-      if(!num){showFieldError('f-num','Numéro requis');err=true;}
+      if(!subNum){showFieldError('f-num-ro','Numéro requis');err=true;}
       if(!name){showFieldError('f-name','Nom requis');err=true;}
       if(err)return;
       const parent=projects.find(x=>x.id===editingSubParentId);const sub=parent.subprojects.find(x=>x.id===editingId);if(!sub)return;
-      Object.assign(sub,{number:num,name,status,progress});await saveSubproject(editingSubParentId,sub,false);parent.updatedAt=now;await saveProject({...parent},false);toast('Sous-projet mis à jour ✓');
+      Object.assign(sub,{number:subNum,name,status,progress});await saveSubproject(editingSubParentId,sub,false);parent.updatedAt=now;await saveProject({...parent},false);toast('Sous-projet mis à jour ✓');
     } else if(editingSubParentId!==null){
       let err=false;
       if(!num){showFieldError('f-num','Numéro requis');err=true;}
