@@ -555,14 +555,17 @@ function buildProjectCard(p,draggable=false){
 
   let expandedSection='';
   if(open){
-    // Subprojects — open by default
+    // Subprojects — only if any exist
     const subsList=p.subprojects.map(s=>buildSubCard(s,p)).join('');
-    const subsSection=`
+    const subsSection=p.subprojects.length?`
       <div class="subs-section">
         <div class="section-hdr">Sous-projets (${p.subprojects.length})
           <button class="btn-inline" data-action="add-sub" data-pid="${p.id}"><i class="ti ti-plus"></i>Ajouter</button>
         </div>
-        <div class="sub-list">${subsList||`<div class="note-empty">Aucun sous-projet</div>`}</div>
+        <div class="sub-list">${subsList}</div>
+      </div>`:`
+      <div class="subs-section subs-empty">
+        <button class="btn-inline" data-action="add-sub" data-pid="${p.id}" style="color:var(--text-tertiary)"><i class="ti ti-plus"></i>Ajouter un sous-projet</button>
       </div>`;
 
     // Notes — last note + toggle
@@ -585,7 +588,11 @@ function buildProjectCard(p,draggable=false){
         <i class="ti ti-chevron-right pr-chevron ${open?'open':''}"></i>
       </div>
       <div class="pr-col-name">
-        <span class="proj-num">${esc(p.number)}</span>
+        <div class="proj-num-row">
+          <span class="proj-num">${esc(p.number)}</span>
+          ${p.notes&&p.notes.length?`<span class="notes-bubble" title="${p.notes.length} note${p.notes.length>1?'s':''}">${p.notes.length}</span>`:''}
+          ${p.subprojects&&p.subprojects.length?`<span class="subs-bubble" title="${p.subprojects.length} sous-projet${p.subprojects.length>1?'s':''}">${p.subprojects.length} <i class="ti ti-folders" style="font-size:.55rem"></i></span>`:''}
+        </div>
         <span class="proj-name">${esc(p.name)}</span>
       </div>
       <div class="pr-col-bar" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()" title="Cliquer pour changer le statut">
