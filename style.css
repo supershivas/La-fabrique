@@ -471,3 +471,9 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:28px
 
 /* Dark mode card hover */
 [data-theme="dark"] .proj-card:hover{box-shadow:0 3px 16px rgba(0,0,0,.35)}
+
+/* ── Notes & subs bubbles ── */
+.proj-num-row{display:flex;align-items:center;gap:5px;flex-wrap:nowrap}
+.notes-bubble{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--accent-light);color:var(--accent);font-size:var(--fs-xxxs);font-weight:700;font-family:var(--font-mono);cursor:default;flex-shrink:0;border:1px solid color-mix(in srgb,var(--accent) 25%,transparent)}
+.subs-bubble{display:inline-flex;align-items:center;gap:2px;height:16px;padding:0 5px;border-radius:8px;background:var(--bg-hover);color:var(--text-tertiary);font-size:var(--fs-xxxs);font-weight:600;font-family:var(--font-mono);cursor:default;flex-shrink:0;border:1px solid var(--border)}
+.subs-empty{padding:6px 16px 8px}
