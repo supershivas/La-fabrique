@@ -590,8 +590,8 @@ function buildProjectCard(p,draggable=false){
       <div class="pr-col-name">
         <div class="proj-num-row">
           <span class="proj-num">${esc(p.number)}</span>
-          ${p.notes&&p.notes.length?`<span class="notes-bubble" title="${p.notes.length} note${p.notes.length>1?'s':''}">${p.notes.length}</span>`:''}
-          ${p.subprojects&&p.subprojects.length?`<span class="subs-bubble" title="${p.subprojects.length} sous-projet${p.subprojects.length>1?'s':''}">${p.subprojects.length} <i class="ti ti-folders" style="font-size:.55rem"></i></span>`:''}
+          ${p.notes&&p.notes.length?`<span class="notes-bubble" title="${p.notes.length} note${p.notes.length>1?'s':''}"><i class="ti ti-note" style="font-size:.6rem"></i> ${p.notes.length}</span>`:''}
+          ${p.subprojects&&p.subprojects.length?`<span class="subs-bubble" title="${p.subprojects.length} sous-projet${p.subprojects.length>1?'s':''}"><i class="ti ti-folders" style="font-size:.6rem"></i> ${p.subprojects.length}</span>`:''}
         </div>
         <span class="proj-name">${esc(p.name)}</span>
       </div>
