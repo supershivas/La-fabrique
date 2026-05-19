@@ -477,3 +477,10 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:28px
 .notes-bubble{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--accent-light);color:var(--accent);font-size:var(--fs-xxxs);font-weight:700;font-family:var(--font-mono);cursor:default;flex-shrink:0;border:1px solid color-mix(in srgb,var(--accent) 25%,transparent)}
 .subs-bubble{display:inline-flex;align-items:center;gap:2px;height:16px;padding:0 5px;border-radius:8px;background:var(--bg-hover);color:var(--text-tertiary);font-size:var(--fs-xxxs);font-weight:600;font-family:var(--font-mono);cursor:default;flex-shrink:0;border:1px solid var(--border)}
 .subs-empty{padding:6px 16px 8px}
+
+/* ── Field changed highlight ── */
+.fg input.field-changed,.fg select.field-changed,.fg textarea.field-changed{
+  border-color:var(--accent)!important;
+  background:color-mix(in srgb,var(--accent) 5%,transparent)!important;
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 15%,transparent);
+}
