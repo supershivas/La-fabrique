@@ -636,7 +636,7 @@ function buildProjectCard(p,draggable=false){
         ${buildNotesSection(p.notes,'proj',p.id)}
       </div>`;
 
-    expandedSection=`<div class="proj-expanded">${subsSection}${notesSection}</div>`;
+    expandedSection=`<div class="proj-expanded-wrap" id="exp-wrap-${p.id}"><div class="proj-expanded">${subsSection}${notesSection}</div></div>`;
   }
 
   const cardAccent=STATUS_ACCENT[p.status]||'var(--border)';
@@ -680,12 +680,12 @@ function buildSubCard(s,parent){
 
   let expandedSection='';
   if(open){
-    expandedSection=`<div class="sub-expanded">
+    expandedSection=`<div class="proj-expanded-wrap" id="exp-wrap-sub-${s.id}"><div class="sub-expanded">
       <div class="section-hdr" style="font-size:var(--fs-xxxs);margin-bottom:4px">Notes
         <button class="btn-inline" data-action="add-sub-note" data-pid="${parent.id}" data-sid="${s.id}"><i class="ti ti-plus"></i>Ajouter</button>
       </div>
       ${buildNotesSection(s.notes,'sub',parent.id,s.id)}
-    </div>`;
+    </div></div>`;
   }
 
   return`<div class="sub-card" draggable="true" data-sid="${s.id}" data-pid="${parent.id}">
@@ -746,8 +746,75 @@ function attachCardListeners(){
   });
 }
 
-function toggleExpand(id){expandedIds.has(id)?expandedIds.delete(id):expandedIds.add(id);renderProjects();}
-function toggleSubExpand(pid,sid){expandedSubIds.has(sid)?expandedSubIds.delete(sid):expandedSubIds.add(sid);renderProjects();}
+function animateExpand(wrapEl, open){
+  if(open){
+    // Mesure la hauteur cible
+    wrapEl.style.height='0';
+    wrapEl.style.overflow='hidden';
+    // Force reflow
+    const inner=wrapEl.firstElementChild;
+    const h=inner?inner.scrollHeight:0;
+    wrapEl.classList.remove('collapsing');
+    requestAnimationFrame(()=>{
+      wrapEl.style.height=h+'px';
+      wrapEl.addEventListener('transitionend',()=>{
+        wrapEl.style.height='';
+        wrapEl.style.overflow='';
+      },{once:true});
+    });
+  } else {
+    const h=wrapEl.scrollHeight;
+    wrapEl.style.height=h+'px';
+    wrapEl.style.overflow='hidden';
+    wrapEl.classList.add('collapsing');
+    requestAnimationFrame(()=>{
+      wrapEl.style.height='0';
+    });
+    wrapEl.addEventListener('transitionend',()=>{
+      // Le re-render se fera après
+    },{once:true});
+  }
+}
+
+function toggleExpand(id){
+  const wasOpen=expandedIds.has(id);
+  if(wasOpen){
+    // Fermeture : animer d'abord, puis re-render
+    const wrapEl=g('exp-wrap-'+id);
+    const chevron=g('project-list')?.querySelector(`[data-pid="${id}"] .pr-chevron`);
+    if(wrapEl){
+      if(chevron){chevron.classList.remove('open');}
+      const card=g('project-list')?.querySelector(`[data-pid="${id}"].proj-card`);
+      if(card)card.classList.remove('expanded');
+      animateExpand(wrapEl,false);
+      setTimeout(()=>{expandedIds.delete(id);renderProjects();},185);
+    } else {
+      expandedIds.delete(id);renderProjects();
+    }
+  } else {
+    // Ouverture : re-render d'abord, puis animer
+    expandedIds.add(id);
+    renderProjects();
+    requestAnimationFrame(()=>{
+      const wrapEl=g('exp-wrap-'+id);
+      if(wrapEl)animateExpand(wrapEl,true);
+    });
+  }
+}
+
+function toggleSubExpand(pid,sid){
+  const wasOpen=expandedSubIds.has(sid);
+  if(!wasOpen){
+    expandedSubIds.add(sid);
+    renderProjects();
+    requestAnimationFrame(()=>{
+      const wrapEl=g('exp-wrap-sub-'+sid);
+      if(wrapEl)animateExpand(wrapEl,true);
+    });
+  } else {
+    expandedSubIds.delete(sid);renderProjects();
+  }
+}
 function toggleNotes(key){notesExpandedIds.has(key)?notesExpandedIds.delete(key):notesExpandedIds.add(key);renderProjects();}
 
 function openMoreMenu(pid,sid,anchorEl){
@@ -867,7 +934,19 @@ async function confirmDelete(id){
   openConfirm(
     'Supprimer ce projet ?',
     `<strong>${esc(p?.number)} — ${esc(p?.name)}</strong><br><span style="color:var(--s-sent-fg);font-size:var(--fs-xxs)">Action irréversible. Sous-projets et notes inclus.</span>`,
-    async()=>{if(await deleteProjectFromDb(id)){projects=projects.filter(p=>p.id!==id);expandedIds.delete(id);toast('Projet supprimé');renderSidebar();renderView();}}
+    async()=>{
+      if(await deleteProjectFromDb(id)){
+        projects=projects.filter(p=>p.id!==id);expandedIds.delete(id);
+        // Animate card out before re-render
+        const card=g('project-list')?.querySelector(`[data-pid="${id}"].proj-card`);
+        if(card){
+          card.classList.add('card-removing');
+          card.addEventListener('animationend',()=>{toast('Projet supprimé');renderSidebar();renderView();},{once:true});
+        } else {
+          toast('Projet supprimé');renderSidebar();renderView();
+        }
+      }
+    }
   );
 }
 async function confirmDeleteSub(parentId,subId){
@@ -875,7 +954,18 @@ async function confirmDeleteSub(parentId,subId){
   openConfirm(
     'Supprimer ce sous-projet ?',
     `<strong>${esc(s?.number)} — ${esc(s?.name)}</strong>`,
-    async()=>{if(await deleteSubprojectFromDb(subId)){parent.subprojects=parent.subprojects.filter(x=>x.id!==subId);toast('Sous-projet supprimé');renderProjects();}}
+    async()=>{
+      if(await deleteSubprojectFromDb(subId)){
+        parent.subprojects=parent.subprojects.filter(x=>x.id!==subId);
+        const card=g('project-list')?.querySelector(`[data-sid="${subId}"].sub-card`);
+        if(card){
+          card.classList.add('card-removing');
+          card.addEventListener('animationend',()=>{toast('Sous-projet supprimé');renderProjects();},{once:true});
+        } else {
+          toast('Sous-projet supprimé');renderProjects();
+        }
+      }
+    }
   );
 }
 
