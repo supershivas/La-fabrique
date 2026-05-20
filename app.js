@@ -328,21 +328,21 @@ function openInlineStatus(pid,anchorEl,sid=null){
         const p=projects.find(x=>x.id===pid);if(!p)return;
         const wasNotDone=p.status!=='done';p.status=newStatus;
         p.progress=AUTO_PROG[newStatus]!==null?AUTO_PROG[newStatus]:p.progress;
-        if(newStatus==='done'&&wasNotDone){p.ended=todayISO();launchFireworks(anchorEl);}
+        if(newStatus==='done'&&wasNotDone){p.ended=todayISO();launchFireworks(anchorEl);
+        // Flash the card green
+        const doneCard=g('project-list')?.querySelector(`[data-pid="${pid}"].proj-card`);
+        if(doneCard){doneCard.classList.remove('card-done-flash');void doneCard.offsetWidth;doneCard.classList.add('card-done-flash');}
+      }
         if(newStatus!=='done')p.ended=null;
         p.updatedAt=todayISO();await saveProject({...p},false);
       }
       toast(`Statut → ${STATUS_LABELS[newStatus]} ✓`);
-      const prevCard=g('project-list')?.querySelector(`[data-pid="${pid}"]`);
       renderProjects();renderSidebar();
-      // Flash the card with new status color after re-render
+      // Pop the status badge after re-render
       const card=g('project-list')?.querySelector(`[data-pid="${pid}"]`);
       if(card){
-        const accent=STATUS_ACCENT[newStatus]||'var(--accent)';
-        card.animate([
-          {boxShadow:`0 0 0 3px ${accent}`,borderColor:accent},
-          {boxShadow:'0 0 0 0px transparent',borderColor:'var(--border)'}
-        ],{duration:700,easing:'ease-out'});
+        const badge=card.querySelector('.status-badge');
+        if(badge){badge.classList.remove('badge-pop');void badge.offsetWidth;badge.classList.add('badge-pop');}
       }
     });
   });
@@ -640,7 +640,8 @@ function buildProjectCard(p,draggable=false){
   }
 
   const cardAccent=STATUS_ACCENT[p.status]||'var(--border)';
-  return`<div class="proj-card ${open?'expanded':''}" data-pid="${p.id}" ${draggable?'draggable="true"':''}  style="--card-accent:${cardAccent}">
+  const isNew=_animateNewId===p.id;if(isNew)_animateNewId=null;
+  return`<div class="proj-card ${open?'expanded':''} ${isNew?'card-new':''}" data-pid="${p.id}" ${draggable?'draggable="true"':''}  style="--card-accent:${cardAccent}">
     <div class="pr-row" data-action="toggle" data-pid="${p.id}">
       <div class="pr-col-ctrl">
         ${dragHandle}
@@ -746,7 +747,7 @@ function attachCardListeners(){
   });
 }
 
-function animateExpand(wrapEl, open){
+function animateExpand(wrapEl,open){
   if(open){
     wrapEl.style.overflow='hidden';
     wrapEl.style.height='0';
@@ -756,47 +757,37 @@ function animateExpand(wrapEl, open){
       wrapEl.style.transition='height .22s cubic-bezier(.4,0,.2,1)';
       wrapEl.style.height=h+'px';
       wrapEl.addEventListener('transitionend',()=>{
-        wrapEl.style.height='';
-        wrapEl.style.overflow='';
-        wrapEl.style.transition='';
+        wrapEl.style.height='';wrapEl.style.overflow='';wrapEl.style.transition='';
       },{once:true});
     }));
   } else {
-    // Figer la hauteur actuelle (mesurée avant overflow:hidden)
     const h=wrapEl.firstElementChild?wrapEl.firstElementChild.offsetHeight:wrapEl.offsetHeight;
     wrapEl.style.transition='none';
     wrapEl.style.overflow='hidden';
     wrapEl.style.height=h+'px';
-    // Double rAF : premier fige, deuxième lance la transition
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       wrapEl.style.transition='height .18s cubic-bezier(.4,0,1,1)';
       wrapEl.style.height='0';
     }));
   }
 }
-
 function toggleExpand(id){
   const wasOpen=expandedIds.has(id);
   if(wasOpen){
     const wrapEl=g('exp-wrap-'+id);
     if(wrapEl){
-      // Anticipe visuellement le chevron
       g('project-list')?.querySelector(`[data-pid="${id}"] .pr-chevron`)?.classList.remove('open');
       g('project-list')?.querySelector(`[data-pid="${id}"].proj-card`)?.classList.remove('expanded');
       animateExpand(wrapEl,false);
       setTimeout(()=>{expandedIds.delete(id);renderProjects();},190);
-    } else {
-      expandedIds.delete(id);renderProjects();
-    }
+    } else {expandedIds.delete(id);renderProjects();}
   } else {
     expandedIds.add(id);
     renderProjects();
-    // Le wrap vient d'être créé par renderProjects — on l'anime
     const wrapEl=g('exp-wrap-'+id);
     if(wrapEl)animateExpand(wrapEl,true);
   }
 }
-
 function toggleSubExpand(pid,sid){
   const wasOpen=expandedSubIds.has(sid);
   if(!wasOpen){
@@ -810,9 +801,7 @@ function toggleSubExpand(pid,sid){
       g('project-list')?.querySelector(`[data-sid="${sid}"] .sub-chevron`)?.classList.remove('open');
       animateExpand(wrapEl,false);
       setTimeout(()=>{expandedSubIds.delete(sid);renderProjects();},190);
-    } else {
-      expandedSubIds.delete(sid);renderProjects();
-    }
+    } else {expandedSubIds.delete(sid);renderProjects();}
   }
 }
 function toggleNotes(key){notesExpandedIds.has(key)?notesExpandedIds.delete(key):notesExpandedIds.add(key);renderProjects();}
@@ -1178,7 +1167,7 @@ async function handleSave(){
       const year=parseInt(num.split('_')[0])||new Date().getFullYear();
       const newP={number:num,name,cat,status,progress,importance,editor,client,date,deadline,ended:status==='done'?now:null,archived:false,updatedAt:now,year,subprojects:[],notes:[]};
       const newId=await saveProject({...newP},true);
-      if(newId){newP.id=newId;if(noteText){const nd=await saveNote(newId,noteText);if(nd)newP.notes.push({id:nd.id,date:now,text:noteText});}projects.push(newP);selectedYear=year;selectedCat=cat;toast('Projet créé ✓');}
+      if(newId){newP.id=newId;if(noteText){const nd=await saveNote(newId,noteText);if(nd)newP.notes.push({id:nd.id,date:now,text:noteText});}projects.push(newP);selectedYear=year;selectedCat=cat;_animateNewId=newId;toast('Projet créé ✓');}
     }
     closeModal();renderSidebar();renderView();
   }finally{g('btn-save').disabled=false;g('btn-save').textContent='Enregistrer';}
