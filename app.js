@@ -28,7 +28,7 @@ const IMP_LBL       = {low:'Low',medium:'Medium',high:'High'};
 let projects=[],selectedYear=new Date().getFullYear(),selectedCat='pro';
 let showArchived=false,showDashboard=false,expandedIds=new Set(),expandedSubIds=new Set();
 let sliderManual=false,currentUser=null,manualOrder={},dragSrcId=null,subDragSrc=null;
-let editingId=null,editingSubParentId=null,addingNoteTo=null,addingNoteToSub=null;
+let editingId=null,editingSubParentId=null,addingNoteTo=null,addingNoteToSub=null,_animateNewId=null;
 let notesExpandedIds=new Set(); // tracks which project note sections are fully expanded
 
 /* ── Date helpers ── */
@@ -255,6 +255,53 @@ function setCardLoading(pid,on){
 /* ══════════════════════════════════════════════════════════
    INLINE STATUS DROPDOWN
    ══════════════════════════════════════════════════════════ */
+
+/* ── Fireworks ── */
+function launchFireworks(anchorEl){
+  const rect=anchorEl?anchorEl.getBoundingClientRect():{top:window.innerHeight/2,left:window.innerWidth/2,width:0,height:0};
+  const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
+  const canvas=document.createElement('canvas');
+  canvas.style.cssText='position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999';
+  canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+  document.body.appendChild(canvas);
+  const ctx=canvas.getContext('2d');
+  const colors=['#C9973A','#E8C06A','#A3D977','#6BBFFF','#FF8A6B','#C084FC','#F472B6','#34D399'];
+  const particles=[];
+  const count=72;
+  for(let i=0;i<count;i++){
+    const angle=(Math.PI*2/count)*i;
+    const speed=3+Math.random()*5;
+    particles.push({
+      x:cx,y:cy,
+      vx:Math.cos(angle)*speed*(0.6+Math.random()*0.8),
+      vy:Math.sin(angle)*speed*(0.6+Math.random()*0.8)-2,
+      alpha:1,size:3+Math.random()*4,
+      color:colors[Math.floor(Math.random()*colors.length)],
+      gravity:0.12+Math.random()*0.08,
+      decay:0.013+Math.random()*0.01,
+    });
+  }
+  let frame;
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let alive=false;
+    particles.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;p.vy+=p.gravity;
+      p.vx*=0.98;p.alpha-=p.decay;
+      if(p.alpha>0){
+        alive=true;
+        ctx.save();ctx.globalAlpha=p.alpha;ctx.fillStyle=p.color;
+        ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();
+        ctx.restore();
+      }
+    });
+    if(alive)frame=requestAnimationFrame(draw);
+    else canvas.remove();
+  }
+  draw();
+  setTimeout(()=>{cancelAnimationFrame(frame);canvas.remove();},2500);
+}
+
 function openInlineStatus(pid,anchorEl,sid=null){
   closeInlineStatus();
   const item=sid?projects.find(x=>x.id===pid)?.subprojects.find(x=>x.id===sid):projects.find(x=>x.id===pid);
@@ -281,10 +328,22 @@ function openInlineStatus(pid,anchorEl,sid=null){
         const p=projects.find(x=>x.id===pid);if(!p)return;
         const wasNotDone=p.status!=='done';p.status=newStatus;
         p.progress=AUTO_PROG[newStatus]!==null?AUTO_PROG[newStatus]:p.progress;
-        if(newStatus==='done'&&wasNotDone)p.ended=todayISO();if(newStatus!=='done')p.ended=null;
+        if(newStatus==='done'&&wasNotDone){p.ended=todayISO();launchFireworks(anchorEl);}
+        if(newStatus!=='done')p.ended=null;
         p.updatedAt=todayISO();await saveProject({...p},false);
       }
-      toast(`Statut → ${STATUS_LABELS[newStatus]} ✓`);renderProjects();renderSidebar();
+      toast(`Statut → ${STATUS_LABELS[newStatus]} ✓`);
+      const prevCard=g('project-list')?.querySelector(`[data-pid="${pid}"]`);
+      renderProjects();renderSidebar();
+      // Flash the card with new status color after re-render
+      const card=g('project-list')?.querySelector(`[data-pid="${pid}"]`);
+      if(card){
+        const accent=STATUS_ACCENT[newStatus]||'var(--accent)';
+        card.animate([
+          {boxShadow:`0 0 0 3px ${accent}`,borderColor:accent},
+          {boxShadow:'0 0 0 0px transparent',borderColor:'var(--border)'}
+        ],{duration:700,easing:'ease-out'});
+      }
     });
   });
   setTimeout(()=>document.addEventListener('click',closeInlineStatus,{once:true}),10);
