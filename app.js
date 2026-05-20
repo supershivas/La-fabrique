@@ -750,7 +750,7 @@ function animateExpand(wrapEl, open){
   if(open){
     wrapEl.style.overflow='hidden';
     wrapEl.style.height='0';
-    // Double rAF : premier frame insère, deuxième mesure après layout
+    wrapEl.style.transition='none';
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       const h=wrapEl.firstElementChild?wrapEl.firstElementChild.offsetHeight:0;
       wrapEl.style.transition='height .22s cubic-bezier(.4,0,.2,1)';
@@ -762,10 +762,16 @@ function animateExpand(wrapEl, open){
       },{once:true});
     }));
   } else {
+    // Figer la hauteur actuelle (mesurée avant overflow:hidden)
+    const h=wrapEl.firstElementChild?wrapEl.firstElementChild.offsetHeight:wrapEl.offsetHeight;
+    wrapEl.style.transition='none';
     wrapEl.style.overflow='hidden';
-    wrapEl.style.transition='height .18s cubic-bezier(.4,0,1,1)';
-    wrapEl.style.height=wrapEl.offsetHeight+'px';
-    requestAnimationFrame(()=>{wrapEl.style.height='0';});
+    wrapEl.style.height=h+'px';
+    // Double rAF : premier fige, deuxième lance la transition
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      wrapEl.style.transition='height .18s cubic-bezier(.4,0,1,1)';
+      wrapEl.style.height='0';
+    }));
   }
 }
 
