@@ -805,7 +805,14 @@ function toggleSubExpand(pid,sid){
     const wrapEl=g('exp-wrap-sub-'+sid);
     if(wrapEl)animateExpand(wrapEl,true);
   } else {
-    expandedSubIds.delete(sid);renderProjects();
+    const wrapEl=g('exp-wrap-sub-'+sid);
+    if(wrapEl){
+      g('project-list')?.querySelector(`[data-sid="${sid}"] .sub-chevron`)?.classList.remove('open');
+      animateExpand(wrapEl,false);
+      setTimeout(()=>{expandedSubIds.delete(sid);renderProjects();},190);
+    } else {
+      expandedSubIds.delete(sid);renderProjects();
+    }
   }
 }
 function toggleNotes(key){notesExpandedIds.has(key)?notesExpandedIds.delete(key):notesExpandedIds.add(key);renderProjects();}
