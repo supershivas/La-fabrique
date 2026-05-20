@@ -500,12 +500,71 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:28px
   overflow:hidden;
 }
 
+/* Nouveau projet */
+.card-new{
+  animation:cardSlideIn .28s cubic-bezier(.2,0,.2,1) both;
+}
+
 /* ── Expand / collapse smooth height ── */
 .proj-expanded-wrap{
   overflow:hidden;
   transition:height .22s cubic-bezier(.4,0,.2,1);
-  /* La hauteur est gérée en JS — pas de valeur initiale ici */
 }
 .proj-expanded-wrap.collapsing{
   transition:height .18s cubic-bezier(.4,0,1,1);
+}
+
+/* ── Progress bar animate on open ── */
+@keyframes progFill{
+  from{width:0}
+}
+.proj-card.expanded .prog-fill-bg,
+.sub-card .prog-fill-bg{
+  animation:progFill .45s cubic-bezier(.4,0,.2,1) both;
+}
+
+/* ── Done flash ── */
+@keyframes doneFlash{
+  0%  {box-shadow:0 0 0 0 var(--s-done-fg)}
+  40% {box-shadow:0 0 0 6px color-mix(in srgb,var(--s-done-fg) 30%,transparent)}
+  100%{box-shadow:0 0 0 0 transparent}
+}
+.card-done-flash{
+  animation:doneFlash .6s ease-out forwards;
+}
+
+/* ── Status badge pulse (Done) ── */
+@keyframes badgePop{
+  0%  {transform:scale(1)}
+  45% {transform:scale(1.18)}
+  70% {transform:scale(.94)}
+  100%{transform:scale(1)}
+}
+.badge-pop{
+  animation:badgePop .35s cubic-bezier(.2,0,.2,1);
+}
+
+/* ── Drag & drop improved ── */
+.proj-card.dragging{
+  opacity:.55;
+  transform:scale(1.02) rotate(.4deg);
+  box-shadow:0 12px 32px rgba(0,0,0,.22)!important;
+  border:1.5px dashed var(--border-md)!important;
+  z-index:10;
+  transition:none!important;
+}
+.proj-card.drag-over{
+  border-color:var(--accent)!important;
+  box-shadow:0 0 0 2px var(--accent-light),0 -3px 0 0 var(--accent)!important;
+}
+.sub-card.dragging{
+  opacity:.55;
+  transform:scale(1.02) rotate(.3deg);
+  box-shadow:0 8px 20px rgba(0,0,0,.18)!important;
+  border:1.5px dashed var(--border-md)!important;
+  transition:none!important;
+}
+.sub-card.drag-over{
+  border-color:var(--accent)!important;
+  box-shadow:0 -3px 0 0 var(--accent)!important;
 }
