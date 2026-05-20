@@ -748,57 +748,46 @@ function attachCardListeners(){
 
 function animateExpand(wrapEl, open){
   if(open){
-    // Mesure la hauteur cible
-    wrapEl.style.height='0';
     wrapEl.style.overflow='hidden';
-    // Force reflow
-    const inner=wrapEl.firstElementChild;
-    const h=inner?inner.scrollHeight:0;
-    wrapEl.classList.remove('collapsing');
-    requestAnimationFrame(()=>{
+    wrapEl.style.height='0';
+    // Double rAF : premier frame insère, deuxième mesure après layout
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      const h=wrapEl.firstElementChild?wrapEl.firstElementChild.offsetHeight:0;
+      wrapEl.style.transition='height .22s cubic-bezier(.4,0,.2,1)';
       wrapEl.style.height=h+'px';
       wrapEl.addEventListener('transitionend',()=>{
         wrapEl.style.height='';
         wrapEl.style.overflow='';
+        wrapEl.style.transition='';
       },{once:true});
-    });
+    }));
   } else {
-    const h=wrapEl.scrollHeight;
-    wrapEl.style.height=h+'px';
     wrapEl.style.overflow='hidden';
-    wrapEl.classList.add('collapsing');
-    requestAnimationFrame(()=>{
-      wrapEl.style.height='0';
-    });
-    wrapEl.addEventListener('transitionend',()=>{
-      // Le re-render se fera après
-    },{once:true});
+    wrapEl.style.transition='height .18s cubic-bezier(.4,0,1,1)';
+    wrapEl.style.height=wrapEl.offsetHeight+'px';
+    requestAnimationFrame(()=>{wrapEl.style.height='0';});
   }
 }
 
 function toggleExpand(id){
   const wasOpen=expandedIds.has(id);
   if(wasOpen){
-    // Fermeture : animer d'abord, puis re-render
     const wrapEl=g('exp-wrap-'+id);
-    const chevron=g('project-list')?.querySelector(`[data-pid="${id}"] .pr-chevron`);
     if(wrapEl){
-      if(chevron){chevron.classList.remove('open');}
-      const card=g('project-list')?.querySelector(`[data-pid="${id}"].proj-card`);
-      if(card)card.classList.remove('expanded');
+      // Anticipe visuellement le chevron
+      g('project-list')?.querySelector(`[data-pid="${id}"] .pr-chevron`)?.classList.remove('open');
+      g('project-list')?.querySelector(`[data-pid="${id}"].proj-card`)?.classList.remove('expanded');
       animateExpand(wrapEl,false);
-      setTimeout(()=>{expandedIds.delete(id);renderProjects();},185);
+      setTimeout(()=>{expandedIds.delete(id);renderProjects();},190);
     } else {
       expandedIds.delete(id);renderProjects();
     }
   } else {
-    // Ouverture : re-render d'abord, puis animer
     expandedIds.add(id);
     renderProjects();
-    requestAnimationFrame(()=>{
-      const wrapEl=g('exp-wrap-'+id);
-      if(wrapEl)animateExpand(wrapEl,true);
-    });
+    // Le wrap vient d'être créé par renderProjects — on l'anime
+    const wrapEl=g('exp-wrap-'+id);
+    if(wrapEl)animateExpand(wrapEl,true);
   }
 }
 
@@ -807,10 +796,8 @@ function toggleSubExpand(pid,sid){
   if(!wasOpen){
     expandedSubIds.add(sid);
     renderProjects();
-    requestAnimationFrame(()=>{
-      const wrapEl=g('exp-wrap-sub-'+sid);
-      if(wrapEl)animateExpand(wrapEl,true);
-    });
+    const wrapEl=g('exp-wrap-sub-'+sid);
+    if(wrapEl)animateExpand(wrapEl,true);
   } else {
     expandedSubIds.delete(sid);renderProjects();
   }
@@ -935,17 +922,15 @@ async function confirmDelete(id){
     'Supprimer ce projet ?',
     `<strong>${esc(p?.number)} — ${esc(p?.name)}</strong><br><span style="color:var(--s-sent-fg);font-size:var(--fs-xxs)">Action irréversible. Sous-projets et notes inclus.</span>`,
     async()=>{
-      if(await deleteProjectFromDb(id)){
-        projects=projects.filter(p=>p.id!==id);expandedIds.delete(id);
-        // Animate card out before re-render
-        const card=g('project-list')?.querySelector(`[data-pid="${id}"].proj-card`);
-        if(card){
-          card.classList.add('card-removing');
-          card.addEventListener('animationend',()=>{toast('Projet supprimé');renderSidebar();renderView();},{once:true});
-        } else {
+      const card=g('project-list')?.querySelector(`[data-pid="${id}"].proj-card`);
+      const doDelete=async()=>{
+        if(await deleteProjectFromDb(id)){
+          projects=projects.filter(pr=>pr.id!==id);expandedIds.delete(id);
           toast('Projet supprimé');renderSidebar();renderView();
         }
-      }
+      };
+      if(card){card.classList.add('card-removing');setTimeout(doDelete,220);}
+      else{await doDelete();}
     }
   );
 }
@@ -955,16 +940,15 @@ async function confirmDeleteSub(parentId,subId){
     'Supprimer ce sous-projet ?',
     `<strong>${esc(s?.number)} — ${esc(s?.name)}</strong>`,
     async()=>{
-      if(await deleteSubprojectFromDb(subId)){
-        parent.subprojects=parent.subprojects.filter(x=>x.id!==subId);
-        const card=g('project-list')?.querySelector(`[data-sid="${subId}"].sub-card`);
-        if(card){
-          card.classList.add('card-removing');
-          card.addEventListener('animationend',()=>{toast('Sous-projet supprimé');renderProjects();},{once:true});
-        } else {
+      const card=g('project-list')?.querySelector(`[data-sid="${subId}"].sub-card`);
+      const doDelete=async()=>{
+        if(await deleteSubprojectFromDb(subId)){
+          parent.subprojects=parent.subprojects.filter(x=>x.id!==subId);
           toast('Sous-projet supprimé');renderProjects();
         }
-      }
+      };
+      if(card){card.classList.add('card-removing');setTimeout(doDelete,220);}
+      else{await doDelete();}
     }
   );
 }
