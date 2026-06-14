@@ -374,7 +374,12 @@ async function fetchProjects(){
     })),
     notes:(nData||[]).filter(n=>n.project_id===p.id&&!n.sub_id).map(n=>({id:n.id,date:(n.created_at||'').split('T')[0],text:n.text})),
   }));
-  restoreFilters();setDbStatus('ok','Connecté');renderSidebar();renderView();
+  const sv_lf=localStorage.getItem('lf-filter-search');const st_lf=localStorage.getItem('lf-filter-status');
+  const im_lf=localStorage.getItem('lf-filter-imp');const ed_lf=localStorage.getItem('lf-filter-editor');const so_lf=localStorage.getItem('lf-sort');
+  if(sv_lf&&g('search'))g('search').value=sv_lf;if(st_lf&&g('filter-status'))g('filter-status').value=st_lf;
+  if(im_lf&&g('filter-imp'))g('filter-imp').value=im_lf;if(ed_lf&&g('filter-editor'))g('filter-editor').value=ed_lf;
+  if(so_lf&&g('sort-by'))g('sort-by').value=so_lf;
+  setDbStatus('ok','Connecté');renderSidebar();renderView();
 }
 
 async function saveProject(payload,isNew=false){
