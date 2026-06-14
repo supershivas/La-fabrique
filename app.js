@@ -887,7 +887,7 @@ async function dupProject(id){
       // Dupliquer les notes du sous-projet
       for(const n of (s.notes||[])){
         const nd=await saveNote(newId,n.text,sid);
-        if(nd)newSub.notes.push({id:nd.id,date:nd.created_at||todayISO(),text:n.text});
+        if(nd)newSub.notes.push({id:nd.id,date:(nd.created_at||'').split('T')[0]||todayISO(),text:n.text});
       }
       newP.subprojects.push(newSub);
     }
@@ -895,7 +895,7 @@ async function dupProject(id){
   // Dupliquer les notes du projet
   for(const n of (src.notes||[])){
     const nd=await saveNote(newId,n.text);
-    if(nd)newP.notes.push({id:nd.id,date:nd.created_at||todayISO(),text:n.text});
+    if(nd)newP.notes.push({id:nd.id,date:(nd.created_at||'').split('T')[0]||todayISO(),text:n.text});
   }
   projects.push(newP);
   toast(`Projet dupliqué ✓ (${newP.subprojects.length} sous-projet${newP.subprojects.length>1?'s':''})`);
