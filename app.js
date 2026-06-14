@@ -887,7 +887,7 @@ async function dupProject(id){
       // Dupliquer les notes du sous-projet
       for(const n of (s.notes||[])){
         const nd=await saveNote(newId,n.text,sid);
-        if(nd)newSub.notes.push({id:nd.id,date:nd.created_at||todayISO(),text:n.text});
+        if(nd)newSub.notes.push({id:nd.id,date:(nd.created_at||'').split('T')[0]||todayISO(),text:n.text});
       }
       newP.subprojects.push(newSub);
     }
@@ -895,7 +895,7 @@ async function dupProject(id){
   // Dupliquer les notes du projet
   for(const n of (src.notes||[])){
     const nd=await saveNote(newId,n.text);
-    if(nd)newP.notes.push({id:nd.id,date:nd.created_at||todayISO(),text:n.text});
+    if(nd)newP.notes.push({id:nd.id,date:(nd.created_at||'').split('T')[0]||todayISO(),text:n.text});
   }
   projects.push(newP);
   toast(`Projet dupliqué ✓ (${newP.subprojects.length} sous-projet${newP.subprojects.length>1?'s':''})`);
@@ -994,6 +994,8 @@ function resetModal(){
   g('f-note').placeholder='Ajouter une note…';
   g('prog-hint').textContent='Auto selon le statut — ajustable manuellement';
   g('editor-suggest').style.display='none';g('client-suggest').style.display='none';
+  const numEl=g('f-num');if(numEl)numEl.readOnly=false;
+  const fgEd=g('fg-editor');if(fgEd)fgEd.style.display='';
   clearFieldErrors();
 }
 
@@ -1017,20 +1019,34 @@ function syncSlider(status){
   g('prog-hint').textContent=`Auto : ${auto}% pour "${STATUS_LABELS[status]}" — ajustable`;
 }
 
+function nextPersoNumber(year){
+  const perso=projects.filter(p=>p.cat==='perso'&&p.year===year);
+  const maxSeq=perso.reduce((m,p)=>{const s=parseInt((p.number.split('_').pop())||0);return Math.max(m,s);},0);
+  return`${year}_${String(maxSeq+1).padStart(3,'0')}`;
+}
+function applyPersoMode(cat,year){
+  const isPerso=cat==='perso';
+  const numEl=g('f-num');const fgEd=g('fg-editor');
+  if(isPerso){sv('f-num',nextPersoNumber(year));if(numEl)numEl.readOnly=true;if(fgEd)fgEd.style.display='none';g('f-editor').value='';}
+  else{if(numEl){numEl.readOnly=false;if(!numEl.value||/^\d{4}_\d{3}$/.test(numEl.value))sv('f-num',`${year}_`);}if(fgEd)fgEd.style.display='';}
+}
+
 function openNewProject(){
   resetModal();showModalFields('new-proj');syncSlider('ready');
   const year=new Date().getFullYear();
-  sv('f-num',`${year}_`);
+  g('f-cat').value=selectedCat;
+  applyPersoMode(selectedCat,year);
   openModal('Nouveau projet','ti-folder-plus');
-  // Focus at end of prefilled number
   const numEl=g('f-num');
-  if(numEl){numEl.focus();numEl.setSelectionRange(numEl.value.length,numEl.value.length);}
+  if(numEl&&!numEl.readOnly){numEl.focus();numEl.setSelectionRange(numEl.value.length,numEl.value.length);}
+  else g('f-name')?.focus();
 }
 
 function openEdit(id){
   resetModal();showModalFields('edit-proj');editingId=id;sliderManual=true;
   const p=projects.find(x=>x.id===id);if(!p){toast('Projet introuvable','error');return;}
   sv('f-num',p.number);sv('f-name',p.name);sv('f-editor',p.editor);sv('f-client',p.client);
+  const fgEd=g('fg-editor');if(fgEd)fgEd.style.display=p.cat==='perso'?'none':'';
   g('f-status-m').value=p.status;g('f-imp').value=p.importance||'medium';
   g('f-progress').value=p.progress;g('f-progress-val').textContent=`${p.progress}%`;
   if(p.progress===100||p.status==='done')g('f-progress').style.accentColor='#639922';
@@ -1491,6 +1507,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Autocomplete
   setupAC('f-editor','editor-suggest',()=>getUniqueList('editor'));
   setupAC('f-client','client-suggest',()=>getUniqueList('client'),{append:true});
+
+  // Catégorie → ajustement numéro + éditeur
+  g('f-cat')?.addEventListener('change',()=>{
+    applyPersoMode(g('f-cat').value,new Date().getFullYear());
+    if(!g('f-num').readOnly){g('f-num').focus();g('f-num').setSelectionRange(g('f-num').value.length,g('f-num').value.length);}
+    else g('f-name')?.focus();
+  });
 
   // Keyboard
   document.addEventListener('keydown',e=>{
