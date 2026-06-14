@@ -392,8 +392,9 @@ async function saveSubproject(parentId,payload,isNew=false){
   if(isNew){const{data,error}=await db.from('subprojects').insert(row).select().single();if(error){toast('Erreur sous-projet','error');return null;}return data.id;}
   const{error}=await db.from('subprojects').update(row).eq('id',payload.id);if(error){toast('Erreur sous-projet','error');return null;}return payload.id;
 }
-async function saveNote(projectId,text,subId=null){
-  const row={project_id:projectId,text,created_at:new Date().toISOString()};if(subId)row.sub_id=subId;
+async function saveNote(projectId,text,subId=null,customDate=null){
+  const ts=customDate?new Date(customDate+'T12:00:00').toISOString():new Date().toISOString();
+  const row={project_id:projectId,text,created_at:ts};if(subId)row.sub_id=subId;
   const{data,error}=await db.from('notes').insert(row).select().single();if(error){toast('Erreur note','error');return null;}return data;
 }
 async function updateNote(noteId,text){const{error}=await db.from('notes').update({text}).eq('id',noteId);if(error){toast('Erreur modification note','error');return false;}return true;}
@@ -661,7 +662,7 @@ function buildProjectCard(p,draggable=false){
       </div>
       <div class="pr-col-name">
         <div class="proj-num-row">
-          <span class="proj-num">${esc(p.number)}</span>
+          <span class="proj-num">${esc(p.number)}</span><button class="btn-copy-num" data-action="copy-num" data-num="${esc(p.number)}" title="Copier le numéro"><i class="ti ti-copy" style="font-size:.6rem;pointer-events:none"></i></button>
           ${p.notes&&p.notes.length?`<span class="notes-bubble" title="${p.notes.length} note${p.notes.length>1?'s':''}"><i class="ti ti-note" style="font-size:.6rem"></i> ${p.notes.length}</span>`:''}
           ${p.subprojects&&p.subprojects.length?`<span class="subs-bubble" title="${p.subprojects.length} sous-projet${p.subprojects.length>1?'s':''}"><i class="ti ti-folders" style="font-size:.6rem"></i> ${p.subprojects.length}</span>`:''}
         </div>
@@ -751,6 +752,7 @@ function attachCardListeners(){
         case 'inline-status': openInlineStatus(pid,node);break;
         case 'inline-status-sub': openInlineStatus(pid,node,sid);break;
         case 'toggle-archived-subs': archivedSubsVisibleIds.has(pid)?archivedSubsVisibleIds.delete(pid):archivedSubsVisibleIds.add(pid);renderProjects();break;
+        case 'copy-num': navigator.clipboard.writeText(node.dataset.num||'').then(()=>toast('Numéro copié ✓')).catch(()=>toast('Erreur copie','error'));break;
         case 'proj-edit-note':editNoteInline(nid,pid,null);break;
         case 'proj-del-note': await delNoteAction(nid,pid,null);break;
         case 'sub-edit-note': editNoteInline(nid,pid,sid);break;
@@ -1083,6 +1085,7 @@ function openEdit(id){
 function openNoteModal(title,cb){
   g('note-modal-title').innerHTML=`<i class="ti ti-notes"></i>${title}`;
   g('note-modal-text').value='';
+  const dateEl=g('note-modal-date');if(dateEl)dateEl.value=todayISO();
   g('note-overlay').classList.add('open');
   setTimeout(()=>g('note-modal-text').focus(),50);
   _noteCb=cb;
@@ -1093,9 +1096,9 @@ function openAddNote(id){
   const p=projects.find(x=>x.id===id);if(!p)return;
   openNoteModal(`${p.number} — ${p.name}`,async()=>{
     const text=g('note-modal-text').value.trim();if(!text)return;
-    const now=todayISO();
-    const nd=await saveNote(p.id,text);
-    if(nd){p.notes.push({id:nd.id,date:now,text});toast('Note ajoutée ✓');}
+    const customDate=g('note-modal-date')?.value||todayISO();
+    const nd=await saveNote(p.id,text,null,customDate);
+    if(nd){p.notes.push({id:nd.id,date:customDate,text});toast('Note ajoutée ✓');}
     closeNoteModal();renderProjects();
   });
 }
@@ -1104,9 +1107,9 @@ function openAddSubNote(parentId,subId){
   const parent=projects.find(x=>x.id===parentId);const s=parent?.subprojects.find(x=>x.id===subId);if(!s)return;
   openNoteModal(`${s.number} — ${s.name}`,async()=>{
     const text=g('note-modal-text').value.trim();if(!text)return;
-    const now=todayISO();
-    const nd=await saveNote(parentId,text,subId);
-    if(nd){s.notes.push({id:nd.id,date:now,text});toast('Note ajoutée ✓');}
+    const customDate=g('note-modal-date')?.value||todayISO();
+    const nd=await saveNote(parentId,text,subId,customDate);
+    if(nd){s.notes.push({id:nd.id,date:customDate,text});toast('Note ajoutée ✓');}
     closeNoteModal();renderProjects();
   });
 }
@@ -1114,7 +1117,8 @@ function openAddSubNote(parentId,subId){
 function openNewSub(parentId){
   resetModal();showModalFields('new-sub');editingSubParentId=parentId;
   const parent=projects.find(x=>x.id===parentId);if(!parent){toast('Projet introuvable','error');return;}
-  sv('f-num',`${parent.number}_${String(parent.subprojects.length+1).padStart(2,'0')}`);
+  const maxSeq=parent.subprojects.reduce((m,s)=>{const parts=s.number.split('_');const seq=parseInt(parts[parts.length-1])||0;return Math.max(m,seq);},0);
+  sv('f-num',`${parent.number}_${String(maxSeq+1).padStart(2,'0')}`);
   openModal(`Sous-projet — ${esc(parent.number)}`,'ti-folders');
 }
 function openEditSub(parentId,subId){
@@ -1234,6 +1238,16 @@ function renderDashboard(){
   const topClients=Object.entries(clientMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const impMap={high:0,medium:0,low:0};scope.forEach(p=>impMap[p.importance]=(impMap[p.importance]||0)+1);
   const total=scope.length,done=byStatus.done||0,cr=total?Math.round((done/total)*100):0;
+  /* editor breakdown */
+  const editorMap={};scope.forEach(p=>{if(p.editor){const e=p.editor.trim();if(e)editorMap[e]=(editorMap[e]||0)+1;}});
+  const topEditors=Object.entries(editorMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  /* notes timeline — last 8 weeks */
+  const allNotes=scope.flatMap(p=>[...p.notes.map(n=>n.date),...p.subprojects.flatMap(s=>s.notes.map(n=>n.date))]);
+  const weekBuckets=[];const now90=new Date();for(let w=7;w>=0;w--){const d=new Date(now90);d.setDate(d.getDate()-w*7);weekBuckets.push({label:`S-${w===0?'0':w}`,start:new Date(d),count:0});}
+  allNotes.forEach(d=>{if(!d)return;const nd=new Date(d);weekBuckets.forEach((b,i)=>{const end=i<weekBuckets.length-1?weekBuckets[i+1].start:new Date(now90.getTime()+864e5);if(nd>=b.start&&nd<end)b.count++;});});
+  const maxNoteCount=Math.max(1,...weekBuckets.map(b=>b.count));
+  /* sub-project completion per project */
+  const subCompletion=scope.filter(p=>p.subprojects.length>0).map(p=>{const totalSubs=p.subprojects.filter(s=>!s.archived).length;const doneSubs=p.subprojects.filter(s=>!s.archived&&s.status==='done').length;return{number:p.number,name:p.name,done:doneSubs,total:totalSubs,pct:totalSubs?Math.round((doneSubs/totalSubs)*100):0};}).sort((a,b)=>b.total-a.total).slice(0,6);
   container.innerHTML=`<div class="dashboard">
     <div class="dash-row">
       <div class="dash-card dash-wide">
@@ -1252,6 +1266,11 @@ function renderDashboard(){
       <div class="dash-card"><div class="dash-title"><i class="ti ti-users"></i> Top clients</div>${topClients.length===0?`<div class="dash-empty">Aucun client</div>`:topClients.map(([c,n])=>`<div class="dash-client-row"><i class="ti ti-user" style="color:var(--text-tertiary)"></i><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c}</span><span class="dash-badge">${n}</span></div>`).join('')}</div>
       <div class="dash-card dash-sm"><div class="dash-title"><i class="ti ti-list-check"></i> Résumé</div><div class="dash-summary-row"><span>Total</span><strong>${total}</strong></div><div class="dash-summary-row"><span>Terminés</span><strong style="color:var(--s-done-fg)">${done}</strong></div><div class="dash-summary-row"><span>En retard</span><strong style="color:var(--dl-over)">${overdue.length}</strong></div><div class="dash-summary-row"><span>Deadline proche</span><strong style="color:var(--dl-warn)">${dueSoon.length}</strong></div><div class="dash-summary-row"><span>Archivés</span><strong style="color:var(--text-tertiary)">${projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&p.archived).length}</strong></div></div>
     </div>
+    <div class="dash-row">
+      ${selectedCat==='pro'?`<div class="dash-card"><div class="dash-title"><i class="ti ti-user-circle"></i> Par éditeur</div>${topEditors.length===0?`<div class="dash-empty">Aucun éditeur</div>`:topEditors.map(([e,n])=>`<div class="dash-client-row"><i class="ti ti-pencil" style="color:var(--text-tertiary)"></i><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e}</span><span class="dash-badge">${n}</span></div>`).join('')}</div>`:''}
+      <div class="dash-card dash-wide"><div class="dash-title"><i class="ti ti-notes"></i> Notes (8 semaines)</div><div style="display:flex;align-items:flex-end;gap:4px;height:50px;margin-top:8px">${weekBuckets.map(b=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:100%;background:var(--accent);border-radius:3px 3px 0 0;height:${Math.round((b.count/maxNoteCount)*40)+2}px;opacity:${b.count?1:.2}" title="${b.count} note${b.count>1?'s':''}"></div><span style="font-size:9px;color:var(--text-tertiary)">${b.count||''}</span></div>`).join('')}</div></div>
+    </div>
+    ${subCompletion.length?`<div class="dash-row"><div class="dash-card dash-full"><div class="dash-title"><i class="ti ti-folders"></i> Complétion sous-projets</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${subCompletion.map(s=>`<div style="display:flex;align-items:center;gap:8px"><span style="font-size:var(--fs-xxxs);color:var(--text-tertiary);min-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.number)}</span><div style="flex:1;height:6px;background:var(--bg-hover);border-radius:3px;overflow:hidden"><div style="width:${s.pct}%;height:100%;background:var(--s-done-fg);border-radius:3px"></div></div><span style="font-size:var(--fs-xxxs);color:var(--text-tertiary);min-width:40px;text-align:right">${s.done}/${s.total}</span></div>`).join('')}</div></div></div>`:''}
   </div>`;
 }
 
