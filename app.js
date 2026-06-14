@@ -1203,7 +1203,7 @@ async function handleSave(){
     } else {
       let err=false;
       if(!num){showFieldError('f-num','Numéro requis');err=true;}
-      else if(cat!=='perso'&&!/^\d{4}_\S+$/.test(num)){showFieldError('f-num','Format attendu : AAAA_xxx');err=true;}
+      else if(cat!=='perso'&&!/^\d{4}_\S+$/.test(num)){showFieldError('f-num','Format attendu : YYYY_xxxx');err=true;}
       else{
         const duplicate=projects.find(p=>p.number===num&&p.cat===cat);
         if(duplicate){showFieldError('f-num',`N° déjà utilisé par "${duplicate.name}"`);err=true;}
