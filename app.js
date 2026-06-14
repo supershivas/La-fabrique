@@ -26,7 +26,7 @@ const IMP_LBL       = {low:'Low',medium:'Medium',high:'High'};
 
 /* ── State ── */
 let projects=[],selectedYear=new Date().getFullYear(),selectedCat='pro';
-let showArchived=false,showDashboard=false,expandedIds=new Set(),expandedSubIds=new Set();
+let showArchived=false,showDashboard=false,expandedIds=new Set(),expandedSubIds=new Set(),archivedSubsVisibleIds=new Set();
 let sliderManual=false,currentUser=null,manualOrder={},dragSrcId=null,subDragSrc=null;
 let editingId=null,editingSubParentId=null,addingNoteTo=null,addingNoteToSub=null,_animateNewId=null;
 let notesExpandedIds=new Set(); // tracks which project note sections are fully expanded
@@ -227,7 +227,7 @@ function openCtxMenu(anchorEl, items){
 function closeCtxMenu(){const m=g('ctx-menu');if(m)m.remove();}
 
 async function handleCtxAction(action,pid,sid){
-  const asyncActions=['dup-proj','archive-proj','dup-sub'];
+  const asyncActions=['dup-proj','archive-proj','dup-sub','archive-sub'];
   if(asyncActions.includes(action))setCardLoading(pid,true);
   try{
     switch(action){
@@ -238,7 +238,7 @@ async function handleCtxAction(action,pid,sid){
       case 'delete-proj':  await confirmDelete(pid);break;
       case 'add-sub-note': openAddSubNote(pid,sid);break;
       case 'dup-sub':      await dupSub(pid,sid);break;
-      case 'archive-sub':  toast('Archivage sous-projet non disponible','info');break;
+      case 'archive-sub':  await toggleArchiveSub(pid,sid);break;
       case 'delete-sub':   await confirmDeleteSub(pid,sid);break;
     }
   }finally{
@@ -369,11 +369,12 @@ async function fetchProjects(){
     updatedAt:(p.updated_at||'').split('T')[0],year:p.year||new Date().getFullYear(),
     subprojects:(sData||[]).filter(s=>s.parent_id===p.id).map(s=>({
       id:s.id,number:s.number,name:s.name,status:s.status||'ready',progress:s.progress||0,
+      deadline:s.deadline||null, ended:s.ended||null, archived:s.archived||false,
       notes:(nData||[]).filter(n=>n.project_id===p.id&&n.sub_id===s.id).map(n=>({id:n.id,date:(n.created_at||'').split('T')[0],text:n.text})),
     })),
     notes:(nData||[]).filter(n=>n.project_id===p.id&&!n.sub_id).map(n=>({id:n.id,date:(n.created_at||'').split('T')[0],text:n.text})),
   }));
-  setDbStatus('ok','Connecté');renderSidebar();renderView();
+  restoreFilters();setDbStatus('ok','Connecté');renderSidebar();renderView();
 }
 
 async function saveProject(payload,isNew=false){
@@ -382,7 +383,7 @@ async function saveProject(payload,isNew=false){
   const{error}=await db.from('projects').update(row).eq('id',payload.id);if(error){toast('Erreur mise à jour','error');return null;}return payload.id;
 }
 async function saveSubproject(parentId,payload,isNew=false){
-  const row={parent_id:parentId,number:payload.number,name:payload.name,status:payload.status,progress:payload.progress};
+  const row={parent_id:parentId,number:payload.number,name:payload.name,status:payload.status,progress:payload.progress,deadline:payload.deadline||null,ended:payload.ended||null,archived:payload.archived||false};
   if(isNew){const{data,error}=await db.from('subprojects').insert(row).select().single();if(error){toast('Erreur sous-projet','error');return null;}return data.id;}
   const{error}=await db.from('subprojects').update(row).eq('id',payload.id);if(error){toast('Erreur sous-projet','error');return null;}return payload.id;
 }
@@ -556,6 +557,7 @@ function clearFilters(){
   });
   renderView();
   updateClearBtn();
+  ['lf-filter-search','lf-filter-status','lf-filter-imp','lf-filter-editor','lf-sort'].forEach(k=>localStorage.removeItem(k));
 }
 function renderProjects(){
   const list=getFiltered(),container=g('project-list');if(!container)return;
@@ -615,13 +617,18 @@ function buildProjectCard(p,draggable=false){
   let expandedSection='';
   if(open){
     // Subprojects — only if any exist
-    const subsList=p.subprojects.map(s=>buildSubCard(s,p)).join('');
+    const activeSubs=p.subprojects.filter(s=>!s.archived);
+    const archivedSubs=p.subprojects.filter(s=>s.archived);
+    const showArchivedSubs=archivedSubsVisibleIds.has(p.id);
+    const subsList=activeSubs.map(s=>buildSubCard(s,p)).join('')+(showArchivedSubs?archivedSubs.map(s=>`<div style="opacity:0.5">${buildSubCard(s,p)}</div>`).join(''):'');
+    const archivedToggle=archivedSubs.length?`<button class="btn-inline" style="color:var(--text-tertiary);font-size:var(--fs-xxxs)" data-action="toggle-archived-subs" data-pid="${p.id}">${showArchivedSubs?'Masquer':'Voir '+archivedSubs.length+' archivé'+(archivedSubs.length>1?'s':'')+' '}</button>`:'';
     const subsSection=p.subprojects.length?`
       <div class="subs-section">
-        <div class="section-hdr">Sous-projets (${p.subprojects.length})
+        <div class="section-hdr">Sous-projets (${activeSubs.length}${archivedSubs.length?' + '+archivedSubs.length+' archivé'+(archivedSubs.length>1?'s':''):''})
           <button class="btn-inline" data-action="add-sub" data-pid="${p.id}"><i class="ti ti-plus"></i>Ajouter</button>
         </div>
         <div class="sub-list">${subsList}</div>
+        ${archivedToggle}
       </div>`:`
       <div class="subs-section subs-empty">
         <button class="btn-inline" data-action="add-sub" data-pid="${p.id}" style="color:var(--text-tertiary)"><i class="ti ti-plus"></i>Ajouter un sous-projet</button>
@@ -738,6 +745,7 @@ function attachCardListeners(){
         case 'add-sub-note':  openAddSubNote(pid,sid);break;
         case 'inline-status': openInlineStatus(pid,node);break;
         case 'inline-status-sub': openInlineStatus(pid,node,sid);break;
+        case 'toggle-archived-subs': archivedSubsVisibleIds.has(pid)?archivedSubsVisibleIds.delete(pid):archivedSubsVisibleIds.add(pid);renderProjects();break;
         case 'proj-edit-note':editNoteInline(nid,pid,null);break;
         case 'proj-del-note': await delNoteAction(nid,pid,null);break;
         case 'sub-edit-note': editNoteInline(nid,pid,sid);break;
@@ -818,9 +826,13 @@ function openMoreMenu(pid,sid,anchorEl){
       {action:'delete-proj',pid, icon:'ti-trash',        label:'Supprimer',danger:true},
     ]);
   } else {
+    const subItem=projects.find(x=>x.id===pid)?.subprojects.find(x=>x.id===sid);
+    const archiveLabel=subItem?.archived?'Restaurer':'Archiver';
+    const archiveIcon=subItem?.archived?'ti-archive-off':'ti-archive';
     openCtxMenu(anchorEl,[
       {action:'add-sub-note',pid,sid,icon:'ti-notes',   label:'Ajouter une note'},
       {action:'dup-sub',     pid,sid,icon:'ti-copy',    label:'Dupliquer'},
+      {action:'archive-sub', pid,sid,icon:archiveIcon,  label:archiveLabel},
       {sep:true},
       {action:'delete-sub',  pid,sid,icon:'ti-trash',   label:'Supprimer',danger:true},
     ]);
@@ -918,6 +930,13 @@ async function toggleArchive(id){
     {label:'Annuler',cb:async()=>{p.archived=wasArchived;await saveProject({...p},false);renderSidebar();renderView();}}
   );
 }
+async function toggleArchiveSub(parentId,subId){
+  const parent=projects.find(x=>x.id===parentId);const s=parent?.subprojects.find(x=>x.id===subId);if(!s)return;
+  s.archived=!s.archived;
+  await saveSubproject(parentId,s,false);
+  toast(s.archived?'Sous-projet archivé':'Sous-projet restauré');
+  renderProjects();
+}
 async function confirmDelete(id){
   const p=projects.find(x=>x.id===id);
   openConfirm(
@@ -963,14 +982,15 @@ async function confirmDeleteSub(parentId,subId){
 // cas: 'new-proj' | 'edit-proj' | 'new-sub' | 'edit-sub'
 function showModalFields(cas){
   const blocs={
-    'bloc-num'    : ['new-proj','edit-proj','new-sub'],
-    'bloc-num-ro' : ['edit-sub'],
-    'bloc-cat'    : ['new-proj'],
-    'bloc-meta'   : ['new-proj','edit-proj'],
-    'bloc-imp'    : ['new-proj','edit-proj'],
-    'bloc-note'   : ['new-proj','edit-proj'],
-    'bloc-name'   : ['new-proj','edit-proj','new-sub','edit-sub'],
-    'bloc-status' : ['new-proj','edit-proj','new-sub','edit-sub'],
+    'bloc-num'          : ['new-proj','edit-proj','new-sub'],
+    'bloc-num-ro'       : ['edit-sub'],
+    'bloc-cat'          : ['new-proj'],
+    'bloc-meta'         : ['new-proj','edit-proj'],
+    'bloc-imp'          : ['new-proj','edit-proj'],
+    'bloc-note'         : ['new-proj','edit-proj'],
+    'bloc-name'         : ['new-proj','edit-proj','new-sub','edit-sub'],
+    'bloc-status'       : ['new-proj','edit-proj','new-sub','edit-sub'],
+    'bloc-sub-deadline' : ['new-sub','edit-sub'],
   };
   Object.entries(blocs).forEach(([id,cases])=>{
     const el=g(id);if(!el)return;
@@ -985,7 +1005,7 @@ function showModalFields(cas){
 
 function resetModal(){
   editingId=null;editingSubParentId=null;addingNoteTo=null;addingNoteToSub=null;sliderManual=false;
-  ['f-num','f-num-ro','f-name','f-editor','f-client','f-note'].forEach(id=>{const el=g(id);if(el){el.value='';el.disabled=false;}});
+  ['f-num','f-num-ro','f-name','f-editor','f-client','f-note','f-sub-deadline'].forEach(id=>{const el=g(id);if(el){el.value='';el.disabled=false;}});
   g('f-status-m').value='ready';g('f-imp').value='medium';
   g('f-progress').value=0;g('f-progress-val').textContent='0%';
   if(g('f-progress'))g('f-progress').style.accentColor='var(--accent)';
@@ -1083,6 +1103,7 @@ function openEditSub(parentId,subId){
   sv('f-num-ro',s.number);sv('f-name',s.name);
   g('f-status-m').value=s.status;g('f-progress').value=s.progress;g('f-progress-val').textContent=`${s.progress}%`;
   if(s.progress===100||s.status==='done')g('f-progress').style.accentColor='#639922';
+  sv('f-sub-deadline', s.deadline||'');
   openModal(`Modifier — ${esc(s.number)}`,'ti-edit');
   watchFieldChanges();
 }
@@ -1130,15 +1151,18 @@ async function handleSave(){
       if(!name){showFieldError('f-name','Nom requis');err=true;}
       if(err)return;
       const parent=projects.find(x=>x.id===editingSubParentId);const sub=parent.subprojects.find(x=>x.id===editingId);if(!sub)return;
-      Object.assign(sub,{number:subNum,name,status,progress});await saveSubproject(editingSubParentId,sub,false);parent.updatedAt=now;await saveProject({...parent},false);toast('Sous-projet mis à jour ✓');
+      const subDeadline=gv('f-sub-deadline');
+      const ended=status==='done'&&sub.status!=='done'?now:(status!=='done'?null:sub.ended);
+      Object.assign(sub,{number:subNum,name,status,progress,deadline:subDeadline||null,ended});await saveSubproject(editingSubParentId,sub,false);parent.updatedAt=now;await saveProject({...parent},false);toast('Sous-projet mis à jour ✓');
     } else if(editingSubParentId!==null){
       let err=false;
       if(!num){showFieldError('f-num','Numéro requis');err=true;}
       if(!name){showFieldError('f-name','Nom requis');err=true;}
       if(err)return;
       const parent=projects.find(x=>x.id===editingSubParentId);
-      const newId=await saveSubproject(editingSubParentId,{number:num,name,status,progress},true);
-      if(newId){parent.subprojects.push({id:newId,number:num,name,status,progress,notes:[]});parent.updatedAt=now;await saveProject({...parent},false);}toast('Sous-projet créé ✓');
+      const subDeadline=gv('f-sub-deadline');
+      const newId=await saveSubproject(editingSubParentId,{number:num,name,status,progress,deadline:subDeadline||null,ended:status==='done'?now:null,archived:false},true);
+      if(newId){parent.subprojects.push({id:newId,number:num,name,status,progress,deadline:subDeadline||null,ended:status==='done'?now:null,archived:false,notes:[]});parent.updatedAt=now;await saveProject({...parent},false);}toast('Sous-projet créé ✓');
     } else if(editingId!==null){
       const editNum=gv('f-num').trim();
       let editErr=false;
@@ -1158,6 +1182,7 @@ async function handleSave(){
     } else {
       let err=false;
       if(!num){showFieldError('f-num','Numéro requis');err=true;}
+      else if(cat!=='perso'&&!/^\d{4}_\S+$/.test(num)){showFieldError('f-num','Format attendu : AAAA_xxx');err=true;}
       else{
         const duplicate=projects.find(p=>p.number===num&&p.cat===cat);
         if(duplicate){showFieldError('f-num',`N° déjà utilisé par "${duplicate.name}"`);err=true;}
@@ -1393,11 +1418,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     else g('prog-hint').textContent='Valeur personnalisée';
   });
 
-  g('search')?.addEventListener('input',()=>{renderView();updateClearBtn();});
-  g('filter-status')?.addEventListener('change',()=>{renderView();updateClearBtn();});
-  g('filter-imp')?.addEventListener('change',()=>{renderView();updateClearBtn();});
-  g('sort-by')?.addEventListener('change',renderView);
-  g('filter-editor')?.addEventListener('change',()=>{renderView();updateClearBtn();});
+  g('search')?.addEventListener('input',()=>{renderView();updateClearBtn();localStorage.setItem('lf-filter-search',g('search').value);});
+  g('filter-status')?.addEventListener('change',()=>{renderView();updateClearBtn();localStorage.setItem('lf-filter-status',g('filter-status').value);});
+  g('filter-imp')?.addEventListener('change',()=>{renderView();updateClearBtn();localStorage.setItem('lf-filter-imp',g('filter-imp').value);});
+  g('sort-by')?.addEventListener('change',()=>{renderView();localStorage.setItem('lf-sort',g('sort-by').value);});
+  g('filter-editor')?.addEventListener('change',()=>{renderView();updateClearBtn();localStorage.setItem('lf-filter-editor',g('filter-editor').value);});
   g('btn-clear-filters')?.addEventListener('click',clearFilters);
 
   /* ── Filter drawer (mobile) ── */
@@ -1498,6 +1523,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(e.key==='n'||e.key==='N'){e.preventDefault();openNewProject();}
     if(e.key==='d'||e.key==='D'){showDashboard=!showDashboard;g('btn-dashboard')?.classList.toggle('active',showDashboard);renderView();}
     if(e.key==='p'||e.key==='P')openSettings();
+    if(e.key==='e'||e.key==='E')exportCSV();
     if(e.key==='Escape'){closeModal();closeSettings();closeInlineStatus();closeCtxMenu();}
   });
 
