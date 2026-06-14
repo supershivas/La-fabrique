@@ -25,7 +25,7 @@ const IMP_TAG       = {low:'imp-tag-low',medium:'imp-tag-med',high:'imp-tag-high
 const IMP_LBL       = {low:'Low',medium:'Medium',high:'High'};
 
 /* ── State ── */
-let projects=[],selectedYear=new Date().getFullYear(),selectedCat='pro';
+let projects=[],selectedYear=parseInt(localStorage.getItem('lf-year'))||new Date().getFullYear(),selectedCat=localStorage.getItem('lf-cat')||'pro';
 let showArchived=false,showDashboard=false,expandedIds=new Set(),expandedSubIds=new Set();
 let sliderManual=false,currentUser=null,manualOrder={},dragSrcId=null,subDragSrc=null;
 let editingId=null,editingSubParentId=null,addingNoteTo=null,addingNoteToSub=null,_animateNewId=null;
@@ -438,7 +438,7 @@ function renderSidebar(){
     container.querySelectorAll('.year-item').forEach(item=>{
       item.addEventListener('click',()=>{
         if(item.dataset.y==='new'){openYearModal(cat);return;}
-        selectedYear=parseInt(item.dataset.y);selectedCat=item.dataset.c;showDashboard=false;renderSidebar();renderView();
+        selectedYear=parseInt(item.dataset.y);selectedCat=item.dataset.c;localStorage.setItem('lf-year',selectedYear);localStorage.setItem('lf-cat',selectedCat);showDashboard=false;renderSidebar();renderView();
       });
     });
   });
@@ -1492,7 +1492,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(view==='settings'){openSettings();return;}
       btn.classList.add('active');
       if(view==='stats'){showDashboard=true;renderView();return;}
-      if(cat){showDashboard=false;selectedCat=cat;const years=[...new Set(projects.filter(p=>p.cat===cat).map(p=>p.year))].sort((a,b)=>b-a);if(years.length)selectedYear=years[0];renderSidebar();renderView();}
+      if(cat){showDashboard=false;selectedCat=cat;const years=[...new Set(projects.filter(p=>p.cat===cat).map(p=>p.year))].sort((a,b)=>b-a);if(years.length)selectedYear=years[0];localStorage.setItem('lf-cat',selectedCat);localStorage.setItem('lf-year',selectedYear);renderSidebar();renderView();}
     });
   });
 
