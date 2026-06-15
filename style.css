@@ -218,7 +218,8 @@ input:disabled{opacity:.5;cursor:not-allowed}
 
 /* Subprojects */
 .subs-section{padding:8px 14px 8px}
-.section-hdr{font-size:var(--fs-xxxs);font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.section-hdr{font-size:var(--fs-xxxs);font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.section-hdr .btn-inline{margin-left:0;text-transform:none;letter-spacing:0;font-weight:500}
 
 /* Sub card — borderless, indented with left accent only */
 .sub-card{background:transparent;border:none;border-left:2px solid var(--card-accent,var(--border-md));border-radius:0;margin-bottom:2px;overflow:hidden;transition:background .15s;padding-left:4px}
