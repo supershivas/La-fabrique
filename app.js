@@ -660,19 +660,19 @@ function buildProjectCard(p,draggable=false){
         ${dragHandle}
         <i class="ti ti-chevron-right pr-chevron ${open?'open':''}"></i>
       </div>
-      <div class="pr-col-name">
-        <div class="proj-num-row">
-          <span class="proj-num">${esc(p.number)}</span><button class="btn-copy-num" data-action="copy-num" data-num="${esc(p.number)}" title="Copier le numéro"><i class="ti ti-copy" style="font-size:.6rem;pointer-events:none"></i></button>
-          ${p.notes&&p.notes.length?`<span class="notes-bubble" title="${p.notes.length} note${p.notes.length>1?'s':''}"><i class="ti ti-note" style="font-size:.6rem"></i> ${p.notes.length}</span>`:''}
-          ${p.subprojects&&p.subprojects.length?`<span class="subs-bubble" title="${p.subprojects.length} sous-projet${p.subprojects.length>1?'s':''}"><i class="ti ti-folders" style="font-size:.6rem"></i> ${p.subprojects.length}</span>`:''}
+      <div class="pr-col-body">
+        <div class="pr-line1">
+          <div class="proj-num-row">
+            <span class="proj-num">${esc(p.number)}</span><button class="btn-copy-num" data-action="copy-num" data-num="${esc(p.number)}" title="Copier le numéro"><i class="ti ti-copy" style="font-size:.6rem;pointer-events:none"></i></button>
+            ${p.notes&&p.notes.length?`<span class="notes-bubble" title="${p.notes.length} note${p.notes.length>1?'s':''}"><i class="ti ti-note" style="font-size:.6rem"></i> ${p.notes.length}</span>`:''}
+            ${p.subprojects&&p.subprojects.length?`<span class="subs-bubble" title="${p.subprojects.length} sous-projet${p.subprojects.length>1?'s':''}"><i class="ti ti-folders" style="font-size:.6rem"></i> ${p.subprojects.length}</span>`:''}
+          </div>
+          <span class="proj-name">${esc(p.name)}</span>
         </div>
-        <span class="proj-name">${esc(p.name)}</span>
-      </div>
-      <div class="pr-col-bar" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()" title="Cliquer pour changer le statut">
-        ${pb(p.progress,p.status)}
-      </div>
-      <div class="pr-col-meta">
-        ${metaTags}
+        <div class="pr-line2" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()" title="Cliquer pour changer le statut">
+          ${pb(p.progress,p.status)}
+          ${metaTags?`<span class="pr-meta-inline">${metaTags}</span>`:''}
+        </div>
       </div>
       <div class="pr-col-actions" onclick="event.stopPropagation()">
         <span class="imp-tag ${IMP_TAG[p.importance]}">${IMP_LBL[p.importance]}</span>
