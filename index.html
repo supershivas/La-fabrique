@@ -7,14 +7,14 @@
   <title>La fabrique — Gestion de projets</title>
   <link rel="stylesheet" href="style.css"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 </head>
 <body>
 <div id="app">
 
   <header id="header">
     <button id="btn-menu" class="btn-icon-hdr"><i class="ti ti-menu-2"></i></button>
-    <div class="logo">
+    <div class="logo logo-header">
       <div class="logo-icon">✦</div>
       <div class="logo-text">
         <span class="logo-name">La fabrique</span>
@@ -32,6 +32,15 @@
     <div id="sidebar-overlay"></div>
 
     <aside id="sidebar">
+      <div class="sidebar-hdr">
+        <div class="logo">
+          <div class="logo-icon">✦</div>
+          <div class="logo-text">
+            <span class="logo-name">La fabrique</span>
+          </div>
+        </div>
+        <button id="btn-settings-sidebar" class="btn-icon-hdr sidebar-hdr-btn" title="Paramètres (P)"><i class="ti ti-settings"></i></button>
+      </div>
       <div class="sidebar-new-wrap">
         <button id="btn-new" class="btn-primary btn-new-sidebar"><i class="ti ti-plus"></i> Nouveau projet</button>
       </div>
@@ -268,11 +277,11 @@
         <div class="settings-row">
           <div class="settings-row-label"><i class="ti ti-palette"></i><div><div class="settings-row-name">Couleur d'accent</div><div class="settings-row-desc">Couleur principale</div></div></div>
           <div class="accent-picker">
-            <button class="accent-swatch active" data-accent="gold"   style="background:#C9973A"></button>
-            <button class="accent-swatch"        data-accent="blue"   style="background:#2563EB"></button>
-            <button class="accent-swatch"        data-accent="green"  style="background:#16A34A"></button>
-            <button class="accent-swatch"        data-accent="purple" style="background:#7C3AED"></button>
-            <button class="accent-swatch"        data-accent="rose"   style="background:#E11D48"></button>
+            <button class="accent-swatch active" data-accent="crimson" style="background:#C0392B"></button>
+            <button class="accent-swatch"        data-accent="gold"    style="background:#C9973A"></button>
+            <button class="accent-swatch"        data-accent="blue"    style="background:#2563EB"></button>
+            <button class="accent-swatch"        data-accent="green"   style="background:#16A34A"></button>
+            <button class="accent-swatch"        data-accent="purple"  style="background:#7C3AED"></button>
           </div>
         </div>
       </div>
@@ -350,5 +359,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="env.js"></script>
 <script src="app.js"></script>
+<script>
+  document.getElementById('btn-settings-sidebar')?.addEventListener('click', () => openSettings());
+</script>
 </body>
 </html>
