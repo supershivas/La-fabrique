@@ -1301,11 +1301,13 @@ function positionDetailPanel(){
   if(!card||!panel)return;
   const cardRect=card.getBoundingClientRect();
   const headerH=g('header')?.offsetHeight||52;
-  const margin=12;
+  const gap=10;
   let top=cardRect.top;
-  const maxTop=window.innerHeight-panel.offsetHeight-margin;
-  top=Math.max(headerH+margin,Math.min(top,maxTop));
+  const maxTop=window.innerHeight-panel.offsetHeight-gap;
+  top=Math.max(headerH+gap,Math.min(top,maxTop));
   panel.style.top=top+'px';
+  panel.style.left=(cardRect.right+gap)+'px';
+  panel.style.right='';
 }
 function updateCardDimming(){
   document.querySelectorAll('.proj-card').forEach(card=>{
@@ -1356,7 +1358,7 @@ function renderDetailPanel(){
       <div class="note-text" id="dp-note-text-${n.id}">${esc(n.text)}</div>
     </div>`).join(''):`<div class="dash-empty">Aucune note</div>`;
   inner.innerHTML=`
-    <div class="dp-header" style="border-left:3px solid ${cardAccent};padding-left:12px;margin-bottom:16px">
+    <div class="dp-header" style="margin-bottom:16px">
       <div class="dp-header-actions">
         <button class="btn-icon dp-close-btn" data-action="dp-close" title="Fermer"><i class="ti ti-x"></i></button>
         <div style="flex:1"></div>
