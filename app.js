@@ -1302,17 +1302,28 @@ function positionDetailPanel(){
   const headerH=g('header')?.offsetHeight||52;
   const vw=window.innerWidth,vh=window.innerHeight;
   const gap=8;
-  // responsive width: clamp to available space right of cards
+  const minFloatSpace=300; // min px needed to float panel beside cards
   const availW=vw-cardRect.right-gap*2;
-  const panelW=Math.max(280,Math.min(_detailPanelW,availW));
-  panel.style.setProperty('--detail-panel-w',panelW+'px');
-  // position: prefer aligned to card top, clamp within viewport
-  const panelH=panel.offsetHeight;
-  let top=cardRect.top;
-  top=Math.max(headerH+gap,Math.min(top,vh-Math.max(panelH,120)-gap));
-  panel.style.top=top+'px';
-  panel.style.left=(cardRect.right+gap)+'px';
-  panel.style.right='';
+  if(availW>=minFloatSpace){
+    // enough space: float beside the card
+    const panelW=Math.min(_detailPanelW,availW);
+    panel.style.setProperty('--detail-panel-w',panelW+'px');
+    panel.classList.remove('panel-overlay');
+    const panelH=panel.offsetHeight;
+    let top=cardRect.top;
+    top=Math.max(headerH+gap,Math.min(top,vh-Math.max(panelH,120)-gap));
+    panel.style.top=top+'px';
+    panel.style.left=(cardRect.right+gap)+'px';
+    panel.style.right='';
+  }else{
+    // not enough space: overlay fixed on the right side
+    const panelW=Math.min(_detailPanelW,vw-gap*2);
+    panel.style.setProperty('--detail-panel-w',panelW+'px');
+    panel.classList.add('panel-overlay');
+    panel.style.left='';
+    panel.style.right=gap+'px';
+    panel.style.top=(headerH+gap)+'px';
+  }
 }
 function updateCardDimming(){
   document.querySelectorAll('.proj-card').forEach(card=>{
