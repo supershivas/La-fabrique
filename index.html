@@ -32,6 +32,7 @@
     <div id="sidebar-overlay"></div>
 
     <aside id="sidebar">
+      <div id="sidebar-resizer"></div>
       <div class="sidebar-hdr">
         <div class="logo">
           <div class="logo-icon">✦</div>
@@ -42,7 +43,11 @@
         <button id="btn-settings-sidebar" class="btn-icon-hdr sidebar-hdr-btn" title="Paramètres (P)"><i class="ti ti-settings"></i></button>
       </div>
       <div class="sidebar-new-wrap">
-        <button id="btn-new" class="btn-primary btn-new-sidebar"><i class="ti ti-plus"></i> Nouveau projet</button>
+        <button id="btn-new" class="btn-primary btn-new-sidebar"><i class="ti ti-plus"></i><span>Nouveau projet</span><kbd class="sidebar-kbd">N</kbd></button>
+      </div>
+      <div class="sidebar-search-wrap">
+        <i class="ti ti-search"></i>
+        <input type="text" id="search" placeholder="Rechercher…  ⌘/" autocomplete="off"/>
       </div>
       <div class="sidebar-scroll">
         <div class="cat-section">
@@ -71,13 +76,11 @@
           <button id="btn-logout" class="btn-sidebar-action btn-logout"><i class="ti ti-logout"></i> Déconnexion</button>
         </div>
       </div>
-      <div id="sidebar-resizer"></div>
     </aside>
 
     <main id="main">
       <div id="topbar">
         <div class="topbar-filters">
-          <div id="search-wrap"><i class="ti ti-search"></i><input type="text" id="search" placeholder="Rechercher…"/></div>
           <select id="filter-status" class="filter">
             <option value="">Statut</option>
             <option value="ready">Ready</option><option value="ongoing">Ongoing</option>
@@ -361,6 +364,33 @@
 <script src="app.js"></script>
 <script>
   document.getElementById('btn-settings-sidebar')?.addEventListener('click', () => openSettings());
+
+  // Sidebar resize
+  (function(){
+    const sidebar = document.getElementById('sidebar');
+    const resizer = document.getElementById('sidebar-resizer');
+    if (!sidebar || !resizer) return;
+    const MIN = 180, MAX = 400;
+    let saved = parseInt(localStorage.getItem('lf_sidebar_w') || '240', 10);
+    sidebar.style.width = saved + 'px';
+    resizer.addEventListener('mousedown', function(e){
+      e.preventDefault();
+      resizer.classList.add('resizing');
+      const startX = e.clientX, startW = sidebar.offsetWidth;
+      function onMove(ev){
+        const w = Math.min(MAX, Math.max(MIN, startW + ev.clientX - startX));
+        sidebar.style.width = w + 'px';
+      }
+      function onUp(){
+        resizer.classList.remove('resizing');
+        localStorage.setItem('lf_sidebar_w', sidebar.offsetWidth);
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      }
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    });
+  })();
 </script>
 </body>
 </html>
