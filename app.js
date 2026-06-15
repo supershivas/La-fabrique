@@ -518,6 +518,7 @@ function getFiltered(){
   if(sort==='name')  return list.sort((a,b)=>a.name.localeCompare(b.name));
   if(sort==='progress')return list.sort((a,b)=>b.progress-a.progress);
   if(sort==='deadline')return list.sort((a,b)=>{if(!a.deadline)return 1;if(!b.deadline)return-1;return new Date(a.deadline)-new Date(b.deadline);});
+  if(sort==='importance'){const IMP_ORDER={high:0,medium:1,low:2};return list.sort((a,b)=>(IMP_ORDER[a.importance]??1)-(IMP_ORDER[b.importance]??1));}
   return list.sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
 }
 
