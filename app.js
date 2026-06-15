@@ -491,7 +491,7 @@ function setupDragDrop(container){
     card.addEventListener('dragstart',e=>{dragSrcId=card.dataset.pid;card.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
     card.addEventListener('dragend',()=>{card.classList.remove('dragging');container.querySelectorAll('.proj-card').forEach(c=>c.classList.remove('drag-over'));dragSrcId=null;});
     card.addEventListener('dragover',e=>{e.preventDefault();if(card.dataset.pid===dragSrcId)return;container.querySelectorAll('.proj-card').forEach(c=>c.classList.remove('drag-over'));card.classList.add('drag-over');});
-    card.addEventListener('drop',e=>{e.preventDefault();if(!dragSrcId)return;const tid=card.dataset.pid;if(tid===dragSrcId)return;const list=getFiltered();const si=list.findIndex(p=>p.id===dragSrcId),ti=list.findIndex(p=>p.id===tid);if(si===-1||ti===-1)return;const[m]=list.splice(si,1);list.splice(ti,0,m);saveOrder(list);renderProjects();});
+    card.addEventListener('drop',e=>{e.preventDefault();if(!dragSrcId)return;const tid=card.dataset.pid;if(tid===dragSrcId)return;const list=getFiltered();const si=list.findIndex(p=>p.id===dragSrcId),ti=list.findIndex(p=>p.id===tid);if(si===-1||ti===-1)return;const[m]=list.splice(si,1);list.splice(ti,0,m);saveOrder(list);const sb=g('sort-by');if(sb&&sb.value!=='manual'){sb.value='manual';localStorage.setItem('lf-sort','manual');}renderProjects();});
   });
 }
 function setupSubDragDrop(subContainer,parentId){
@@ -581,7 +581,7 @@ function renderProjects(){
     const editors=[...new Set(projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&p.editor).map(p=>p.editor.trim()).filter(Boolean))].sort();
     edSel.innerHTML='<option value="">Éditeur</option>'+editors.map(e=>`<option value="${esc(e)}" ${curEd===e?'selected':''}>${esc(e)}</option>`).join('');
   }
-  const isDraggable=g('sort-by').value==='manual';
+  const isDraggable=true;
   if(!list.length){
     const q=g('search').value,st=g('filter-status').value,imp=g('filter-imp').value,ed=g('filter-editor')?.value||'';
     const hasFilter=q||st||imp||ed;
@@ -598,7 +598,7 @@ function renderProjects(){
   attachCardListeners();
   if(selectedDetailId){renderDetailPanel();positionDetailPanel();updateCardDimming();requestAnimationFrame(()=>drawConnector());}
   else{updateCardDimming();}
-  if(isDraggable)setupDragDrop(container);
+  setupDragDrop(container);
   list.filter(p=>expandedIds.has(p.id)).forEach(p=>{
     const subCont=container.querySelector(`[data-pid="${p.id}"] .sub-list`);
     if(subCont)setupSubDragDrop(subCont,p.id);
