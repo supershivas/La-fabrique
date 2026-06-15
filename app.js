@@ -596,7 +596,7 @@ function renderProjects(){
   }
   container.innerHTML=list.map(p=>buildProjectCard(p,isDraggable)).join('');
   attachCardListeners();
-  if(selectedDetailId){renderDetailPanel();setTimeout(()=>{positionDetailPanel();drawConnector();updateCardDimming();},30);}
+  if(selectedDetailId){renderDetailPanel();positionDetailPanel();updateCardDimming();requestAnimationFrame(()=>drawConnector());}
   else{updateCardDimming();}
   if(isDraggable)setupDragDrop(container);
   list.filter(p=>expandedIds.has(p.id)).forEach(p=>{
@@ -1276,15 +1276,14 @@ function openDetailPanel(id){
   selectedDetailId=id;
   const panel=g('detail-panel');
   if(!panel)return;
-  panel.style.setProperty('--detail-panel-w',_detailPanelW+'px');
   const p=projects.find(x=>x.id===id);
   const accent=p?STATUS_ACCENT[p.status]||'var(--border-md)':'var(--border-md)';
   panel.style.borderLeftColor=accent;
-  panel.classList.add('open');
-  positionDetailPanel();
   updateCardDimming();
   renderDetailPanel();
-  setTimeout(()=>{positionDetailPanel();drawConnector();},40);
+  positionDetailPanel();
+  panel.classList.add('open');
+  requestAnimationFrame(()=>drawConnector());
 }
 function closeDetailPanel(){
   selectedDetailId=null;
@@ -1301,10 +1300,16 @@ function positionDetailPanel(){
   if(!card||!panel)return;
   const cardRect=card.getBoundingClientRect();
   const headerH=g('header')?.offsetHeight||52;
-  const gap=10;
+  const vw=window.innerWidth,vh=window.innerHeight;
+  const gap=8;
+  // responsive width: clamp to available space right of cards
+  const availW=vw-cardRect.right-gap*2;
+  const panelW=Math.max(280,Math.min(_detailPanelW,availW));
+  panel.style.setProperty('--detail-panel-w',panelW+'px');
+  // position: prefer aligned to card top, clamp within viewport
+  const panelH=panel.offsetHeight;
   let top=cardRect.top;
-  const maxTop=window.innerHeight-panel.offsetHeight-gap;
-  top=Math.max(headerH+gap,Math.min(top,maxTop));
+  top=Math.max(headerH+gap,Math.min(top,vh-Math.max(panelH,120)-gap));
   panel.style.top=top+'px';
   panel.style.left=(cardRect.right+gap)+'px';
   panel.style.right='';
