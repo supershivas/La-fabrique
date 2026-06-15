@@ -643,7 +643,8 @@ function buildProjectCard(p,draggable=false){
 
   const cardAccent=STATUS_ACCENT[p.status]||'var(--border)';
   const isNew=_animateNewId===p.id;if(isNew)_animateNewId=null;
-  return`<div class="proj-card ${open?'expanded':''} ${isNew?'card-new':''}${selectedDetailId===p.id?' detail-selected':''}" data-pid="${p.id}" ${draggable?'draggable="true"':''}  style="--card-accent:${cardAccent}">
+  const dimmed=selectedDetailId&&selectedDetailId!==p.id;
+  return`<div class="proj-card ${open?'expanded':''} ${isNew?'card-new':''}${selectedDetailId===p.id?' detail-selected':''}${dimmed?' dim-card':''}" data-pid="${p.id}" ${draggable?'draggable="true"':''}  style="--card-accent:${cardAccent}">
     <div class="pr-row" data-action="open-detail" data-pid="${p.id}">
       <div class="pr-col-ctrl">
         ${dragHandle}
@@ -730,7 +731,7 @@ function attachCardListeners(){
       e.stopPropagation();
       const{action,pid,sid,nid,key}=node.dataset;
       switch(action){
-        case 'open-detail':   openDetailPanel(pid);break;
+        case 'open-detail':   selectedDetailId===pid?closeDetailPanel():openDetailPanel(pid);break;
         case 'toggle':        toggleExpand(pid);break;
         case 'toggle-sub':    toggleSubExpand(pid,sid);break;
         case 'toggle-notes':  toggleNotes(key);break;
@@ -1281,11 +1282,13 @@ function openDetailPanel(id){
   panel.style.borderLeftWidth='3px';
   panel.classList.add('open');
   renderDetailPanel();
+  setTimeout(drawConnector,50);
 }
 function closeDetailPanel(){
   selectedDetailId=null;
   const panel=g('detail-panel');
-  if(panel)panel.classList.remove('open');
+  if(panel){panel.classList.remove('open');panel.style.borderLeftColor='';panel.style.borderLeftWidth='';}
+  removeConnector();
   renderProjects();
 }
 function renderDetailPanel(){
@@ -1357,6 +1360,7 @@ function renderDetailPanel(){
       <div class="dp-notes-list notes-section" style="padding:0">${notesHTML}</div>
     </div>`;
   attachDetailListeners();
+  setTimeout(drawConnector,30);
 }
 function attachDetailListeners(){
   const inner=g('detail-panel-inner');if(!inner)return;
@@ -1381,6 +1385,25 @@ function attachDetailListeners(){
     });
   });
 }
+function drawConnector(){
+  removeConnector();
+  if(!selectedDetailId)return;
+  const card=document.querySelector(`.proj-card[data-pid="${selectedDetailId}"]`);
+  const panel=g('detail-panel');
+  if(!card||!panel||!panel.classList.contains('open'))return;
+  const cardRect=card.getBoundingClientRect();
+  const panelRect=panel.getBoundingClientRect();
+  const y=cardRect.top+cardRect.height/2;
+  const x1=cardRect.right,x2=panelRect.left;
+  if(x2<=x1+2)return;
+  const p=projects.find(x=>x.id===selectedDetailId);
+  const color=p?STATUS_ACCENT[p.status]||'var(--border-md)':'var(--border-md)';
+  const el=document.createElement('div');
+  el.id='detail-connector';
+  el.style.cssText=`position:fixed;top:${y}px;left:${x1}px;width:${x2-x1}px;height:2px;background:${color};pointer-events:none;z-index:50;opacity:.6;transition:top .15s`;
+  document.body.appendChild(el);
+}
+function removeConnector(){const el=g('detail-connector');if(el)el.remove();}
 function initDetailResizer(){
   const resizer=g('detail-resizer'),panel=g('detail-panel');
   if(!resizer||!panel)return;
@@ -1678,6 +1701,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.addEventListener('mousemove',e=>{if(!isResizing)return;const newW=Math.min(300,Math.max(120,startW+(e.clientX-startX)));sidebar.style.width=newW+'px';});
   document.addEventListener('mouseup',()=>{if(!isResizing)return;isResizing=false;resizer?.classList.remove('dragging');document.body.style.cursor='';document.body.style.userSelect='';savePrefs({sidebarW:sidebar.offsetWidth});});
   initDetailResizer();
+  g('project-list')?.addEventListener('scroll',drawConnector);
+  window.addEventListener('resize',drawConnector);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&selectedDetailId&&!g('modal-overlay')?.classList.contains('open'))closeDetailPanel();});
 
   // Date masks supprimés — champs type="date" natifs
 
