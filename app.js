@@ -622,7 +622,7 @@ function buildMetaTags(p){
 function buildProjectCard(p,draggable=false){
   const open=expandedIds.has(p.id);
   const metaTags=buildMetaTags(p);
-  const dragHandle=draggable?`<div class="drag-handle" title="Réordonner"><i class="ti ti-grip-vertical"></i></div>`:'';
+  const dragHandle=draggable?`<div class="drag-handle" title="Réordonner" onclick="event.stopPropagation()"><i class="ti ti-grip-vertical"></i></div>`:'';
 
   let expandedSection='';
   if(open){
@@ -668,7 +668,7 @@ function buildProjectCard(p,draggable=false){
         </div>
       </div>
       <div class="pr-col-actions" onclick="event.stopPropagation()">
-        <span class="imp-tag ${IMP_TAG[p.importance]}">${IMP_LBL[p.importance]}</span>
+        <span class="imp-tag ${IMP_TAG[p.importance]}" data-action="cycle-imp" data-pid="${p.id}" title="Changer la priorité" style="cursor:pointer">${IMP_LBL[p.importance]}</span>
         <button class="btn-edit-main" data-action="edit-proj" data-pid="${p.id}">
           <i class="ti ti-edit"></i><span>Modifier</span>
         </button>
@@ -747,6 +747,7 @@ function attachCardListeners(){
         case 'inline-status-sub': openInlineStatus(pid,node,sid);break;
         case 'toggle-archived-subs': archivedSubsVisibleIds.has(pid)?archivedSubsVisibleIds.delete(pid):archivedSubsVisibleIds.add(pid);renderProjects();break;
         case 'copy-num': navigator.clipboard.writeText(node.dataset.num||'').then(()=>toast('Numéro copié ✓')).catch(()=>toast('Erreur copie','error'));break;
+        case 'cycle-imp':{const cyc={low:'medium',medium:'high',high:'low'};const pr=projects.find(x=>x.id===pid);if(!pr)break;pr.importance=cyc[pr.importance]||'medium';await saveProject(pr);renderProjects();break;}
         case 'proj-edit-note':editNoteInline(nid,pid,null);break;
         case 'proj-del-note': await delNoteAction(nid,pid,null);break;
         case 'sub-edit-note': editNoteInline(nid,pid,sid);break;

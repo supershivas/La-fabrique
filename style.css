@@ -210,7 +210,9 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .imp-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0;cursor:default}
 .imp-low{background:var(--imp-low)}.imp-med{background:var(--imp-med)}.imp-high{background:var(--imp-high)}
 /* importance tags */
-.imp-tag{display:inline-flex;align-items:center;padding:1px 7px;border-radius:20px;font-size:var(--fs-xxxs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:default;flex-shrink:0}
+.imp-tag{display:inline-flex;align-items:center;padding:1px 7px;border-radius:20px;font-size:var(--fs-xxxs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:default;flex-shrink:0;transition:filter .12s}
+.imp-tag[data-action="cycle-imp"]{cursor:pointer}
+.imp-tag[data-action="cycle-imp"]:hover{filter:brightness(1.12)}
 .imp-tag-low{background:color-mix(in srgb,var(--imp-low) 15%,transparent);color:var(--imp-low);border:1px solid color-mix(in srgb,var(--imp-low) 35%,transparent)}
 .imp-tag-med{background:color-mix(in srgb,var(--imp-med) 15%,transparent);color:var(--imp-med);border:1px solid color-mix(in srgb,var(--imp-med) 35%,transparent)}
 .imp-tag-high{background:color-mix(in srgb,var(--imp-high) 15%,transparent);color:var(--imp-high);border:1px solid color-mix(in srgb,var(--imp-high) 35%,transparent)}
