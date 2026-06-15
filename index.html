@@ -56,8 +56,7 @@
         <span id="db-status" class="db-status connecting"><i class="ti ti-database"></i><span>Connexion…</span></span>
         <span id="db-last-sync" class="db-last-sync"></span>
         <div class="sidebar-footer-actions">
-          <button id="btn-settings" class="btn-sidebar-action"><i class="ti ti-settings" style="font-size:.8rem"></i> Paramètres</button>
-          <button id="btn-logout"   class="btn-sidebar-action btn-logout"><i class="ti ti-logout"></i></button>
+          <button id="btn-logout" class="btn-sidebar-action btn-logout"><i class="ti ti-logout"></i> Déconnexion</button>
         </div>
       </div>
       <div id="sidebar-resizer"></div>
@@ -65,32 +64,35 @@
 
     <main id="main">
       <div id="topbar">
-        <button id="btn-new" class="btn-primary"><i class="ti ti-plus"></i><span class="btn-label">Nouveau</span></button>
-        <div id="search-wrap"><i class="ti ti-search"></i><input type="text" id="search" placeholder="Rechercher…"/></div>
-        <select id="filter-status" class="filter">
-          <option value="">Statut</option>
-          <option value="ready">Ready</option><option value="ongoing">Ongoing</option>
-          <option value="review">In review</option><option value="sent">Sent</option>
-          <option value="done">Done</option><option value="hold">On hold</option>
-        </select>
-        <select id="filter-imp" class="filter">
-          <option value="">Importance</option>
-          <option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
-        </select>
-        <select id="filter-editor" class="filter">
-          <option value="">Éditeur</option>
-        </select>
-        <button id="btn-clear-filters" class="btn-clear-filters" title="Effacer les filtres" style="display:none"><i class="ti ti-filter-off"></i></button>
-        <span id="result-count" class="result-count"></span>
-        <div class="topbar-sep"></div>
-        <select id="sort-by" class="filter">
-          <option value="manual">✥ Manuel</option>
-          <option value="updated">↓ Update</option>
-          <option value="number">Numéro</option>
-          <option value="name">Nom</option>
-          <option value="deadline">Deadline</option>
-          <option value="progress">%</option>
-        </select>
+        <div class="topbar-filters">
+          <div id="search-wrap"><i class="ti ti-search"></i><input type="text" id="search" placeholder="Rechercher…"/></div>
+          <select id="filter-status" class="filter">
+            <option value="">Statut</option>
+            <option value="ready">Ready</option><option value="ongoing">Ongoing</option>
+            <option value="review">In review</option><option value="sent">Sent</option>
+            <option value="done">Done</option><option value="hold">On hold</option>
+          </select>
+          <select id="filter-imp" class="filter">
+            <option value="">Importance</option>
+            <option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
+          </select>
+          <select id="filter-editor" class="filter">
+            <option value="">Éditeur</option>
+          </select>
+          <button id="btn-clear-filters" class="btn-clear-filters" title="Effacer les filtres" style="display:none"><i class="ti ti-filter-off"></i></button>
+          <span id="result-count" class="result-count"></span>
+        </div>
+        <div class="topbar-actions">
+          <select id="sort-by" class="filter">
+            <option value="manual">✥ Manuel</option>
+            <option value="updated">↓ Update</option>
+            <option value="number">Numéro</option>
+            <option value="name">Nom</option>
+            <option value="deadline">Deadline</option>
+            <option value="progress">%</option>
+          </select>
+          <button id="btn-new" class="btn-primary"><i class="ti ti-plus"></i><span class="btn-label">Nouveau</span></button>
+        </div>
       </div>
       <div id="project-list"></div>
     </main>
