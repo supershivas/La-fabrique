@@ -1275,6 +1275,10 @@ function openDetailPanel(id){
   const panel=g('detail-panel');
   if(!panel)return;
   panel.style.setProperty('--detail-panel-w',_detailPanelW+'px');
+  const p=projects.find(x=>x.id===id);
+  const accent=p?STATUS_ACCENT[p.status]||'var(--border-md)':'var(--border-md)';
+  panel.style.borderLeftColor=accent;
+  panel.style.borderLeftWidth='3px';
   panel.classList.add('open');
   renderDetailPanel();
 }
@@ -1289,6 +1293,8 @@ function renderDetailPanel(){
   const p=projects.find(x=>x.id===selectedDetailId);
   if(!p){closeDetailPanel();return;}
   const inner=g('detail-panel-inner');if(!inner)return;
+  const panel=g('detail-panel');
+  if(panel){const accent=STATUS_ACCENT[p.status]||'var(--border-md)';panel.style.borderLeftColor=accent;panel.style.borderLeftWidth='3px';}
   const cardAccent=STATUS_ACCENT[p.status]||'var(--border)';
   const metaTags=buildMetaTags(p);
   const activeSubs=p.subprojects.filter(s=>!s.archived);
