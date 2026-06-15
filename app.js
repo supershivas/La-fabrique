@@ -596,7 +596,8 @@ function renderProjects(){
   }
   container.innerHTML=list.map(p=>buildProjectCard(p,isDraggable)).join('');
   attachCardListeners();
-  if(selectedDetailId)renderDetailPanel();
+  if(selectedDetailId){renderDetailPanel();setTimeout(()=>{positionDetailPanel();drawConnector();updateCardDimming();},30);}
+  else{updateCardDimming();}
   if(isDraggable)setupDragDrop(container);
   list.filter(p=>expandedIds.has(p.id)).forEach(p=>{
     const subCont=container.querySelector(`[data-pid="${p.id}"] .sub-list`);
@@ -1279,17 +1280,39 @@ function openDetailPanel(id){
   const p=projects.find(x=>x.id===id);
   const accent=p?STATUS_ACCENT[p.status]||'var(--border-md)':'var(--border-md)';
   panel.style.borderLeftColor=accent;
-  panel.style.borderLeftWidth='3px';
   panel.classList.add('open');
+  positionDetailPanel();
+  updateCardDimming();
   renderDetailPanel();
-  setTimeout(drawConnector,50);
+  setTimeout(()=>{positionDetailPanel();drawConnector();},40);
 }
 function closeDetailPanel(){
   selectedDetailId=null;
   const panel=g('detail-panel');
-  if(panel){panel.classList.remove('open');panel.style.borderLeftColor='';panel.style.borderLeftWidth='';}
+  if(panel){panel.classList.remove('open');panel.style.borderLeftColor='';}
   removeConnector();
+  updateCardDimming();
   renderProjects();
+}
+function positionDetailPanel(){
+  if(!selectedDetailId)return;
+  const card=document.querySelector(`.proj-card[data-pid="${selectedDetailId}"]`);
+  const panel=g('detail-panel');
+  if(!card||!panel)return;
+  const cardRect=card.getBoundingClientRect();
+  const headerH=g('header')?.offsetHeight||52;
+  const margin=12;
+  let top=cardRect.top;
+  const maxTop=window.innerHeight-panel.offsetHeight-margin;
+  top=Math.max(headerH+margin,Math.min(top,maxTop));
+  panel.style.top=top+'px';
+}
+function updateCardDimming(){
+  document.querySelectorAll('.proj-card').forEach(card=>{
+    const pid=card.dataset.pid;
+    if(selectedDetailId&&pid!==selectedDetailId){card.classList.add('dim-card');}
+    else{card.classList.remove('dim-card');}
+  });
 }
 function renderDetailPanel(){
   if(!selectedDetailId)return;
@@ -1297,7 +1320,7 @@ function renderDetailPanel(){
   if(!p){closeDetailPanel();return;}
   const inner=g('detail-panel-inner');if(!inner)return;
   const panel=g('detail-panel');
-  if(panel){const accent=STATUS_ACCENT[p.status]||'var(--border-md)';panel.style.borderLeftColor=accent;panel.style.borderLeftWidth='3px';}
+  if(panel){panel.style.borderLeftColor=STATUS_ACCENT[p.status]||'var(--border-md)';}
   const cardAccent=STATUS_ACCENT[p.status]||'var(--border)';
   const metaTags=buildMetaTags(p);
   const activeSubs=p.subprojects.filter(s=>!s.archived);
@@ -1393,14 +1416,14 @@ function drawConnector(){
   if(!card||!panel||!panel.classList.contains('open'))return;
   const cardRect=card.getBoundingClientRect();
   const panelRect=panel.getBoundingClientRect();
-  const y=cardRect.top+cardRect.height/2;
+  const y=cardRect.top+Math.min(24,cardRect.height/2);
   const x1=cardRect.right,x2=panelRect.left;
   if(x2<=x1+2)return;
   const p=projects.find(x=>x.id===selectedDetailId);
   const color=p?STATUS_ACCENT[p.status]||'var(--border-md)':'var(--border-md)';
   const el=document.createElement('div');
   el.id='detail-connector';
-  el.style.cssText=`position:fixed;top:${y}px;left:${x1}px;width:${x2-x1}px;height:2px;background:${color};pointer-events:none;z-index:50;opacity:.6;transition:top .15s`;
+  el.style.cssText=`position:fixed;top:${y}px;left:${x1}px;width:${x2-x1}px;height:2px;background:${color};pointer-events:none;z-index:99;opacity:.5`;
   document.body.appendChild(el);
 }
 function removeConnector(){const el=g('detail-connector');if(el)el.remove();}
@@ -1701,8 +1724,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.addEventListener('mousemove',e=>{if(!isResizing)return;const newW=Math.min(300,Math.max(120,startW+(e.clientX-startX)));sidebar.style.width=newW+'px';});
   document.addEventListener('mouseup',()=>{if(!isResizing)return;isResizing=false;resizer?.classList.remove('dragging');document.body.style.cursor='';document.body.style.userSelect='';savePrefs({sidebarW:sidebar.offsetWidth});});
   initDetailResizer();
-  g('project-list')?.addEventListener('scroll',drawConnector);
-  window.addEventListener('resize',drawConnector);
+  g('project-list')?.addEventListener('scroll',()=>{positionDetailPanel();drawConnector();});
+  window.addEventListener('resize',()=>{positionDetailPanel();drawConnector();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&selectedDetailId&&!g('modal-overlay')?.classList.contains('open'))closeDetailPanel();});
 
   // Date masks supprimés — champs type="date" natifs
