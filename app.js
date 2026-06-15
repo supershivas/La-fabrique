@@ -535,8 +535,8 @@ function buildNotesSection(notes,actionPrefix,pid,sid=null){
       <div class="note-item-header">
         <div class="note-date"><i class="ti ti-clock" style="font-size:.6rem"></i>${toEU(n.date)}</div>
         <div class="note-actions">
-          <button class="btn-icon" data-action="${actionPrefix}-edit-note" data-nid="${n.id}" data-pid="${pid}" data-sid="${sid||''}" style="font-size:.75rem"><i class="ti ti-edit"></i></button>
-          <button class="btn-icon" data-action="${actionPrefix}-del-note"  data-nid="${n.id}" data-pid="${pid}" data-sid="${sid||''}" style="font-size:.75rem;color:var(--s-sent-fg)"><i class="ti ti-trash"></i></button>
+          <button class="btn-icon" data-action="${actionPrefix}-edit-note" data-nid="${n.id}" data-pid="${pid}" data-sid="${sid||''}" style="font-size:.75rem" title="Modifier cette note"><i class="ti ti-edit"></i></button>
+          <button class="btn-icon" data-action="${actionPrefix}-del-note"  data-nid="${n.id}" data-pid="${pid}" data-sid="${sid||''}" style="font-size:.75rem;color:var(--s-sent-fg)" title="Supprimer cette note"><i class="ti ti-trash"></i></button>
         </div>
       </div>
       <div class="note-text" id="note-text-${n.id}">${esc(n.text)}</div>
@@ -669,8 +669,10 @@ function buildProjectCard(p,draggable=false){
           </div>
           <span class="proj-name">${esc(p.name)}</span>
         </div>
-        <div class="pr-line2" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()" title="Cliquer pour changer le statut">
-          ${pb(p.progress,p.status)}
+        <div class="pr-line2">
+          <div class="pr-bar-trigger" data-action="inline-status" data-pid="${p.id}" onclick="event.stopPropagation()" title="Cliquer pour changer le statut">
+            ${pb(p.progress,p.status)}
+          </div>
           ${metaTags?`<span class="pr-meta-inline">${metaTags}</span>`:''}
         </div>
       </div>
@@ -849,6 +851,7 @@ function openMoreMenu(pid,sid,anchorEl){
 /* ── Note inline edit ── */
 function editNoteInline(nid,pid,sid){
   const textEl=g('note-text-'+nid);if(!textEl)return;
+  const noteItem=textEl.closest('.note-item');if(noteItem)noteItem.classList.add('editing');
   const original=textEl.textContent;
   const textarea=document.createElement('textarea');textarea.className='note-edit-area';textarea.value=original;
   textEl.replaceWith(textarea);textarea.focus();
