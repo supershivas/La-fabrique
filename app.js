@@ -30,6 +30,8 @@ let showArchived=false,showDashboard=false,expandedIds=new Set(),expandedSubIds=
 let sliderManual=false,currentUser=null,manualOrder={},dragSrcId=null,subDragSrc=null;
 let editingId=null,editingSubParentId=null,addingNoteTo=null,addingNoteToSub=null,_animateNewId=null;
 let notesExpandedIds=new Set(); // tracks which project note sections are fully expanded
+let selectedDetailId=null;
+let _detailPanelW=parseInt(localStorage.getItem('lf-detail-w'))||420;
 
 /* ── Date helpers ── */
 function toEU(iso){if(!iso)return'—';const[y,m,d]=iso.split('-');return`${d}/${m}/${y}`;}
@@ -535,8 +537,8 @@ function buildNotesSection(notes,actionPrefix,pid,sid=null){
       <div class="note-item-header">
         <div class="note-date"><i class="ti ti-clock" style="font-size:.6rem"></i>${toEU(n.date)}</div>
         <div class="note-actions">
-          <button class="btn-icon" data-action="${actionPrefix}-edit-note" data-nid="${n.id}" data-pid="${pid}" data-sid="${sid||''}" style="font-size:.75rem" title="Modifier cette note"><i class="ti ti-edit"></i></button>
-          <button class="btn-icon" data-action="${actionPrefix}-del-note"  data-nid="${n.id}" data-pid="${pid}" data-sid="${sid||''}" style="font-size:.75rem;color:var(--s-sent-fg)" title="Supprimer cette note"><i class="ti ti-trash"></i></button>
+          <button class="btn-icon" data-action="${actionPrefix}-edit-note" data-nid="${n.id}" data-pid="${pid}" data-sid="${sid||''}" style="font-size:.75rem"><i class="ti ti-edit"></i></button>
+          <button class="btn-icon" data-action="${actionPrefix}-del-note"  data-nid="${n.id}" data-pid="${pid}" data-sid="${sid||''}" style="font-size:.75rem;color:var(--s-sent-fg)"><i class="ti ti-trash"></i></button>
         </div>
       </div>
       <div class="note-text" id="note-text-${n.id}">${esc(n.text)}</div>
@@ -594,6 +596,7 @@ function renderProjects(){
   }
   container.innerHTML=list.map(p=>buildProjectCard(p,isDraggable)).join('');
   attachCardListeners();
+  if(selectedDetailId)renderDetailPanel();
   if(isDraggable)setupDragDrop(container);
   list.filter(p=>expandedIds.has(p.id)).forEach(p=>{
     const subCont=container.querySelector(`[data-pid="${p.id}"] .sub-list`);
@@ -622,43 +625,29 @@ function buildProjectCard(p,draggable=false){
 
   let expandedSection='';
   if(open){
-    // Subprojects — only if any exist
     const activeSubs=p.subprojects.filter(s=>!s.archived);
     const archivedSubs=p.subprojects.filter(s=>s.archived);
     const showArchivedSubs=archivedSubsVisibleIds.has(p.id);
-    const subsList=activeSubs.map(s=>buildSubCard(s,p)).join('')+(showArchivedSubs?archivedSubs.map(s=>`<div style="opacity:0.5">${buildSubCard(s,p)}</div>`).join(''):'');
+    const subsList=activeSubs.map(s=>buildSubCard(s,p)).join('')+(showArchivedSubs?archivedSubs.map(s=>`<div style="opacity:.5">${buildSubCard(s,p)}</div>`).join(''):'');
     const archivedToggle=archivedSubs.length?`<button class="btn-inline" style="color:var(--text-tertiary);font-size:var(--fs-xxxs)" data-action="toggle-archived-subs" data-pid="${p.id}">${showArchivedSubs?'Masquer':'Voir '+archivedSubs.length+' archivé'+(archivedSubs.length>1?'s':'')+' '}</button>`:'';
-    const subsSection=p.subprojects.length?`
-      <div class="subs-section">
-        <div class="section-hdr">Sous-projets (${activeSubs.length}${archivedSubs.length?' + '+archivedSubs.length+' archivé'+(archivedSubs.length>1?'s':''):''})
-          <button class="btn-inline" data-action="add-sub" data-pid="${p.id}"><i class="ti ti-plus"></i>Ajouter</button>
-        </div>
-        <div class="sub-list">${subsList}</div>
-        ${archivedToggle}
-      </div>`:`
-      <div class="subs-section subs-empty">
-        <button class="btn-inline" data-action="add-sub" data-pid="${p.id}" style="color:var(--text-tertiary)"><i class="ti ti-plus"></i>Ajouter un sous-projet</button>
-      </div>`;
-
-    // Notes — last note + toggle
-    const notesSection=`
-      <div class="notes-section" style="border-top:1px solid var(--border)">
-        <div class="section-hdr">Notes
-          <button class="btn-inline" data-action="add-note" data-pid="${p.id}"><i class="ti ti-plus"></i>Ajouter</button>
-        </div>
-        ${buildNotesSection(p.notes,'proj',p.id)}
-      </div>`;
-
-    expandedSection=`<div class="proj-expanded-wrap" id="exp-wrap-${p.id}"><div class="proj-expanded">${subsSection}${notesSection}</div></div>`;
+    expandedSection=`<div class="proj-expanded-wrap" id="exp-wrap-${p.id}"><div class="proj-expanded">
+    <div class="subs-section">
+      <div class="section-hdr">Sous-projets (${activeSubs.length})
+        <button class="btn-inline" data-action="add-sub" data-pid="${p.id}"><i class="ti ti-plus"></i>Ajouter</button>
+      </div>
+      <div class="sub-list">${activeSubs.length?subsList:'<div class="subs-empty"><button class="btn-inline" data-action="add-sub" data-pid="${p.id}">+ Ajouter un sous-projet</button></div>'}</div>
+      ${archivedToggle}
+    </div>
+  </div></div>`;
   }
 
   const cardAccent=STATUS_ACCENT[p.status]||'var(--border)';
   const isNew=_animateNewId===p.id;if(isNew)_animateNewId=null;
-  return`<div class="proj-card ${open?'expanded':''} ${isNew?'card-new':''}" data-pid="${p.id}" ${draggable?'draggable="true"':''}  style="--card-accent:${cardAccent}">
-    <div class="pr-row" data-action="toggle" data-pid="${p.id}">
+  return`<div class="proj-card ${open?'expanded':''} ${isNew?'card-new':''}${selectedDetailId===p.id?' detail-selected':''}" data-pid="${p.id}" ${draggable?'draggable="true"':''}  style="--card-accent:${cardAccent}">
+    <div class="pr-row" data-action="open-detail" data-pid="${p.id}">
       <div class="pr-col-ctrl">
         ${dragHandle}
-        <i class="ti ti-chevron-right pr-chevron ${open?'open':''}"></i>
+        <button class="btn-chevron" data-action="toggle" data-pid="${p.id}" onclick="event.stopPropagation()" title="Aperçu rapide"><i class="ti ti-chevron-right pr-chevron ${open?'open':''}"></i></button>
       </div>
       <div class="pr-col-body">
         <div class="pr-line1">
@@ -741,6 +730,7 @@ function attachCardListeners(){
       e.stopPropagation();
       const{action,pid,sid,nid,key}=node.dataset;
       switch(action){
+        case 'open-detail':   openDetailPanel(pid);break;
         case 'toggle':        toggleExpand(pid);break;
         case 'toggle-sub':    toggleSubExpand(pid,sid);break;
         case 'toggle-notes':  toggleNotes(key);break;
@@ -850,8 +840,7 @@ function openMoreMenu(pid,sid,anchorEl){
 
 /* ── Note inline edit ── */
 function editNoteInline(nid,pid,sid){
-  const textEl=g('note-text-'+nid);if(!textEl)return;
-  const noteItem=textEl.closest('.note-item');if(noteItem)noteItem.classList.add('editing');
+  const textEl=g('dp-note-text-'+nid)||g('note-text-'+nid);if(!textEl)return;
   const original=textEl.textContent;
   const textarea=document.createElement('textarea');textarea.className='note-edit-area';textarea.value=original;
   textEl.replaceWith(textarea);textarea.focus();
@@ -1278,6 +1267,135 @@ function renderDashboard(){
 }
 
 /* ══════════════════════════════════════════════════════════
+   DETAIL PANEL
+   ══════════════════════════════════════════════════════════ */
+function openDetailPanel(id){
+  if(!id)return;
+  selectedDetailId=id;
+  const panel=g('detail-panel');
+  if(!panel)return;
+  panel.style.setProperty('--detail-panel-w',_detailPanelW+'px');
+  panel.classList.add('open');
+  renderDetailPanel();
+}
+function closeDetailPanel(){
+  selectedDetailId=null;
+  const panel=g('detail-panel');
+  if(panel)panel.classList.remove('open');
+  renderProjects();
+}
+function renderDetailPanel(){
+  if(!selectedDetailId)return;
+  const p=projects.find(x=>x.id===selectedDetailId);
+  if(!p){closeDetailPanel();return;}
+  const inner=g('detail-panel-inner');if(!inner)return;
+  const cardAccent=STATUS_ACCENT[p.status]||'var(--border)';
+  const metaTags=buildMetaTags(p);
+  const activeSubs=p.subprojects.filter(s=>!s.archived);
+  const archivedSubs=p.subprojects.filter(s=>s.archived);
+  const showArchivedSubs=archivedSubsVisibleIds.has(p.id);
+  const subsHTML=activeSubs.map(s=>{
+    const sdls=dlStatus(s.deadline||''),sdlClass=sdls==='over'?'dl-over':sdls==='warn'?'dl-warn':'';
+    const subNotes=s.notes||[];
+    return`<div class="dp-sub-row">
+      <div class="dp-sub-main">
+        <span class="dp-sub-num">${esc(s.number)}</span>
+        <span class="status-badge ${STATUS_CLASS[s.status]}" style="font-size:.6rem;padding:1px 5px;cursor:pointer" data-action="dp-sub-status" data-pid="${p.id}" data-sid="${s.id}">${STATUS_LABELS[s.status]}</span>
+        <span class="dp-sub-name">${esc(s.name)}</span>
+      </div>
+      <div class="dp-sub-actions">
+        ${s.deadline?`<span class="tag-chip ${sdlClass}" style="font-size:var(--fs-xxxs)">☠ ${toEU(s.deadline)}</span>`:''}
+        ${subNotes.length?`<span class="notes-bubble" title="${subNotes.length} note${subNotes.length>1?'s':''}"><i class="ti ti-note" style="font-size:.6rem"></i> ${subNotes.length}</span>`:''}
+        <button class="btn-icon" data-action="dp-add-sub-note" data-pid="${p.id}" data-sid="${s.id}" style="font-size:.75rem" title="Ajouter une note"><i class="ti ti-notes"></i></button>
+        <button class="btn-icon" data-action="dp-edit-sub" data-pid="${p.id}" data-sid="${s.id}" style="font-size:.75rem" title="Modifier"><i class="ti ti-edit"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+  const sortedNotes=[...p.notes].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const notesHTML=sortedNotes.length?sortedNotes.map(n=>`
+    <div class="note-item" data-note-id="${n.id}">
+      <div class="note-item-header">
+        <div class="note-date"><i class="ti ti-clock" style="font-size:.6rem"></i>${toEU(n.date)}</div>
+        <div class="note-actions">
+          <button class="btn-icon" data-action="dp-edit-note" data-nid="${n.id}" data-pid="${p.id}" style="font-size:.75rem"><i class="ti ti-edit"></i></button>
+          <button class="btn-icon" data-action="dp-del-note" data-nid="${n.id}" data-pid="${p.id}" style="font-size:.75rem;color:var(--s-sent-fg)"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+      <div class="note-text" id="dp-note-text-${n.id}">${esc(n.text)}</div>
+    </div>`).join(''):`<div class="dash-empty">Aucune note</div>`;
+  inner.innerHTML=`
+    <div class="dp-header" style="border-left:3px solid ${cardAccent};padding-left:12px;margin-bottom:16px">
+      <div class="dp-header-actions">
+        <button class="btn-icon dp-close-btn" data-action="dp-close" title="Fermer"><i class="ti ti-x"></i></button>
+        <div style="flex:1"></div>
+        <button class="btn-ghost" data-action="dp-edit" data-pid="${p.id}"><i class="ti ti-edit"></i><span style="margin-left:4px">Modifier</span></button>
+        <button class="btn-icon" data-action="dp-more" data-pid="${p.id}" title="Plus"><i class="ti ti-dots-vertical"></i></button>
+      </div>
+      <div class="dp-num">${esc(p.number)}</div>
+      <div class="dp-name">${esc(p.name)}</div>
+      <div class="dp-status-row">
+        <span class="status-badge ${STATUS_CLASS[p.status]}" style="cursor:pointer" data-action="dp-inline-status" data-pid="${p.id}" title="Changer le statut">${STATUS_LABELS[p.status]}</span>
+        <span class="imp-tag ${IMP_TAG[p.importance]}">${IMP_LBL[p.importance]}</span>
+      </div>
+      <div style="margin-top:10px">${pb(p.progress,p.status)}</div>
+    </div>
+    ${metaTags?`<div class="dp-meta-section">${metaTags}</div>`:''}
+    <div class="dp-section">
+      <div class="dp-section-title"><i class="ti ti-folders"></i> Sous-projets (${activeSubs.length}${archivedSubs.length?' + '+archivedSubs.length+' archivé'+(archivedSubs.length>1?'s':''):''})<button class="btn-inline" data-action="dp-add-sub" data-pid="${p.id}"><i class="ti ti-plus"></i>Ajouter</button></div>
+      <div class="dp-subs-list">${activeSubs.length?subsHTML:'<div class="dash-empty">Aucun sous-projet</div>'}</div>
+      ${archivedSubs.length?`<button class="btn-inline" style="color:var(--text-tertiary);font-size:var(--fs-xxxs);margin-top:6px" data-action="dp-toggle-archived-subs" data-pid="${p.id}">${showArchivedSubs?'Masquer archivés':'Voir '+archivedSubs.length+' archivé'+(archivedSubs.length>1?'s':'')}</button>`:''}
+      ${showArchivedSubs&&archivedSubs.length?`<div style="opacity:.5;margin-top:4px">${archivedSubs.map(s=>`<div class="dp-sub-row"><span class="dp-sub-num">${esc(s.number)}</span><span class="dp-sub-name">${esc(s.name)}</span></div>`).join('')}</div>`:''}
+    </div>
+    <div class="dp-section">
+      <div class="dp-section-title"><i class="ti ti-notes"></i> Notes<button class="btn-inline" data-action="dp-add-note" data-pid="${p.id}"><i class="ti ti-plus"></i>Ajouter</button></div>
+      <div class="dp-notes-list notes-section" style="padding:0">${notesHTML}</div>
+    </div>`;
+  attachDetailListeners();
+}
+function attachDetailListeners(){
+  const inner=g('detail-panel-inner');if(!inner)return;
+  inner.querySelectorAll('[data-action]').forEach(node=>{
+    node.addEventListener('click',async e=>{
+      e.stopPropagation();
+      const{action,pid,sid,nid}=node.dataset;
+      switch(action){
+        case 'dp-close':closeDetailPanel();break;
+        case 'dp-edit':openEdit(pid);break;
+        case 'dp-more':openMoreMenu(pid,null,node);break;
+        case 'dp-inline-status':openInlineStatus(pid,node);break;
+        case 'dp-add-sub':openNewSub(pid);break;
+        case 'dp-edit-sub':openEditSub(pid,sid);break;
+        case 'dp-sub-status':openInlineStatus(pid,node,sid);break;
+        case 'dp-add-note':openAddNote(pid);break;
+        case 'dp-add-sub-note':openAddSubNote(pid,sid);break;
+        case 'dp-edit-note':editNoteInline(nid,pid,null);break;
+        case 'dp-del-note':await delNoteAction(nid,pid,null);break;
+        case 'dp-toggle-archived-subs':archivedSubsVisibleIds.has(pid)?archivedSubsVisibleIds.delete(pid):archivedSubsVisibleIds.add(pid);renderDetailPanel();break;
+      }
+    });
+  });
+}
+function initDetailResizer(){
+  const resizer=g('detail-resizer'),panel=g('detail-panel');
+  if(!resizer||!panel)return;
+  let startX=0,startW=0;
+  resizer.addEventListener('mousedown',e=>{
+    startX=e.clientX;startW=panel.offsetWidth;
+    resizer.classList.add('dragging');
+    const onMove=e=>{
+      const delta=startX-e.clientX;
+      const newW=Math.min(650,Math.max(300,startW+delta));
+      _detailPanelW=newW;
+      panel.style.setProperty('--detail-panel-w',newW+'px');
+      localStorage.setItem('lf-detail-w',newW);
+    };
+    const onUp=()=>{resizer.classList.remove('dragging');document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);};
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('mouseup',onUp);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
    AUTH
    ══════════════════════════════════════════════════════════ */
 
@@ -1553,6 +1671,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   resizer?.addEventListener('mousedown',e=>{if(window.innerWidth<=640)return;isResizing=true;startX=e.clientX;startW=sidebar.offsetWidth;resizer.classList.add('dragging');document.body.style.cursor='col-resize';document.body.style.userSelect='none';});
   document.addEventListener('mousemove',e=>{if(!isResizing)return;const newW=Math.min(300,Math.max(120,startW+(e.clientX-startX)));sidebar.style.width=newW+'px';});
   document.addEventListener('mouseup',()=>{if(!isResizing)return;isResizing=false;resizer?.classList.remove('dragging');document.body.style.cursor='';document.body.style.userSelect='';savePrefs({sidebarW:sidebar.offsetWidth});});
+  initDetailResizer();
 
   // Date masks supprimés — champs type="date" natifs
 
