@@ -7,14 +7,14 @@
   <title>La fabrique — Gestion de projets</title>
   <link rel="stylesheet" href="style.css"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 </head>
 <body>
 <div id="app">
 
   <header id="header">
     <button id="btn-menu" class="btn-icon-hdr"><i class="ti ti-menu-2"></i></button>
-    <div class="logo">
+    <div class="logo logo-header">
       <div class="logo-icon">✦</div>
       <div class="logo-text">
         <span class="logo-name">La fabrique</span>
@@ -32,8 +32,22 @@
     <div id="sidebar-overlay"></div>
 
     <aside id="sidebar">
+      <div id="sidebar-resizer"></div>
+      <div class="sidebar-hdr">
+        <div class="logo">
+          <div class="logo-icon">✦</div>
+          <div class="logo-text">
+            <span class="logo-name">La fabrique</span>
+          </div>
+        </div>
+        <button id="btn-settings-sidebar" class="btn-icon-hdr sidebar-hdr-btn" title="Paramètres (P)"><i class="ti ti-settings"></i></button>
+      </div>
       <div class="sidebar-new-wrap">
-        <button id="btn-new" class="btn-primary btn-new-sidebar"><i class="ti ti-plus"></i> Nouveau projet</button>
+        <button id="btn-new" class="btn-primary btn-new-sidebar"><i class="ti ti-plus"></i><span>Nouveau projet</span><kbd class="sidebar-kbd">N</kbd></button>
+      </div>
+      <div class="sidebar-search-wrap">
+        <i class="ti ti-search"></i>
+        <input type="text" id="search" placeholder="Rechercher…  ⌘/" autocomplete="off"/>
       </div>
       <div class="sidebar-scroll">
         <div class="cat-section">
@@ -45,15 +59,12 @@
           <div class="cat-label">Perso</div>
           <div id="yl-perso" class="year-list"></div>
         </div>
-        <div class="cat-divider"></div>
-        <div class="cat-section">
-          <div class="cat-label">Outils</div>
-          <div class="sidebar-tools">
-            <button id="btn-dashboard"    class="btn-tool"><i class="ti ti-chart-bar"></i><span>Statistiques</span></button>
-            <button id="btn-export"       class="btn-tool"><i class="ti ti-download"></i><span>Export CSV</span></button>
-            <button id="toggle-archived"  class="btn-tool"><i class="ti ti-archive"></i><span>Voir archivés</span></button>
-          </div>
-        </div>
+      </div>
+      <div class="sidebar-tools">
+        <button id="btn-dashboard"    class="btn-tool"><i class="ti ti-chart-bar"></i><span>Statistiques</span></button>
+        <button id="toggle-archived"  class="btn-tool"><i class="ti ti-archive"></i><span>Voir archivés</span></button>
+        <button id="btn-export"       class="btn-tool"><i class="ti ti-download"></i><span>Export CSV</span></button>
+        <button id="btn-trash"        class="btn-tool"><i class="ti ti-trash"></i><span>Corbeille</span><span class="tool-badge"></span></button>
       </div>
       <div id="sidebar-footer">
         <span id="db-status" class="db-status connecting"><i class="ti ti-database"></i><span>Connexion…</span></span>
@@ -62,13 +73,11 @@
           <button id="btn-logout" class="btn-sidebar-action btn-logout"><i class="ti ti-logout"></i> Déconnexion</button>
         </div>
       </div>
-      <div id="sidebar-resizer"></div>
     </aside>
 
     <main id="main">
       <div id="topbar">
         <div class="topbar-filters">
-          <div id="search-wrap"><i class="ti ti-search"></i><input type="text" id="search" placeholder="Rechercher…"/></div>
           <select id="filter-status" class="filter">
             <option value="">Statut</option>
             <option value="ready">Ready</option><option value="ongoing">Ongoing</option>
@@ -268,11 +277,11 @@
         <div class="settings-row">
           <div class="settings-row-label"><i class="ti ti-palette"></i><div><div class="settings-row-name">Couleur d'accent</div><div class="settings-row-desc">Couleur principale</div></div></div>
           <div class="accent-picker">
-            <button class="accent-swatch active" data-accent="gold"   style="background:#C9973A"></button>
-            <button class="accent-swatch"        data-accent="blue"   style="background:#2563EB"></button>
-            <button class="accent-swatch"        data-accent="green"  style="background:#16A34A"></button>
-            <button class="accent-swatch"        data-accent="purple" style="background:#7C3AED"></button>
-            <button class="accent-swatch"        data-accent="rose"   style="background:#E11D48"></button>
+            <button class="accent-swatch active" data-accent="crimson" style="background:#C0392B"></button>
+            <button class="accent-swatch"        data-accent="gold"    style="background:#C9973A"></button>
+            <button class="accent-swatch"        data-accent="blue"    style="background:#2563EB"></button>
+            <button class="accent-swatch"        data-accent="green"   style="background:#16A34A"></button>
+            <button class="accent-swatch"        data-accent="purple"  style="background:#7C3AED"></button>
           </div>
         </div>
       </div>
@@ -350,5 +359,35 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="env.js"></script>
 <script src="app.js"></script>
+<script>
+  document.getElementById('btn-settings-sidebar')?.addEventListener('click', () => openSettings());
+
+  // Sidebar resize
+  (function(){
+    const sidebar = document.getElementById('sidebar');
+    const resizer = document.getElementById('sidebar-resizer');
+    if (!sidebar || !resizer) return;
+    const MIN = 180, MAX = 400;
+    let saved = parseInt(localStorage.getItem('lf_sidebar_w') || '240', 10);
+    sidebar.style.width = saved + 'px';
+    resizer.addEventListener('mousedown', function(e){
+      e.preventDefault();
+      resizer.classList.add('resizing');
+      const startX = e.clientX, startW = sidebar.offsetWidth;
+      function onMove(ev){
+        const w = Math.min(MAX, Math.max(MIN, startW + ev.clientX - startX));
+        sidebar.style.width = w + 'px';
+      }
+      function onUp(){
+        resizer.classList.remove('resizing');
+        localStorage.setItem('lf_sidebar_w', sidebar.offsetWidth);
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      }
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    });
+  })();
+</script>
 </body>
 </html>

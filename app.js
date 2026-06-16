@@ -26,7 +26,7 @@ const IMP_LBL       = {low:'Low',medium:'Medium',high:'High'};
 
 /* ── State ── */
 let projects=[],selectedYear=parseInt(localStorage.getItem('lf-year'))||new Date().getFullYear(),selectedCat=localStorage.getItem('lf-cat')||'pro';
-let showArchived=false,showDashboard=false,expandedIds=new Set(),expandedSubIds=new Set(),archivedSubsVisibleIds=new Set();
+let showArchived=false,showDashboard=false,showTrash=false,expandedIds=new Set(),expandedSubIds=new Set(),archivedSubsVisibleIds=new Set();
 let sliderManual=false,currentUser=null,manualOrder={},dragSrcId=null,subDragSrc=null;
 let editingId=null,editingSubParentId=null,addingNoteTo=null,addingNoteToSub=null,_animateNewId=null;
 let notesExpandedIds=new Set(); // tracks which project note sections are fully expanded
@@ -367,7 +367,7 @@ async function fetchProjects(){
     id:p.id,number:p.number,name:p.name,cat:p.cat||'pro',
     status:p.status||'ready',progress:p.progress||0,importance:p.importance||'medium',
     editor:p.editor||'',client:p.client||'',date:p.date||'',
-    deadline:p.deadline||'',ended:p.ended||null,archived:p.archived||false,
+    deadline:p.deadline||'',ended:p.ended||null,archived:p.archived||false,trashed:p.trashed||false,
     updatedAt:(p.updated_at||'').split('T')[0],year:p.year||new Date().getFullYear(),
     subprojects:(sData||[]).filter(s=>s.parent_id===p.id).map(s=>({
       id:s.id,number:s.number,name:s.name,status:s.status||'ready',progress:s.progress||0,
@@ -385,7 +385,7 @@ async function fetchProjects(){
 }
 
 async function saveProject(payload,isNew=false){
-  const row={number:payload.number,name:payload.name,cat:payload.cat,status:payload.status,progress:payload.progress,importance:payload.importance,editor:payload.editor,client:payload.client,date:payload.date||null,deadline:payload.deadline||null,ended:payload.ended||null,year:payload.year,archived:payload.archived||false,updated_at:new Date().toISOString(),user_id:currentUser.id};
+  const row={number:payload.number,name:payload.name,cat:payload.cat,status:payload.status,progress:payload.progress,importance:payload.importance,editor:payload.editor,client:payload.client,date:payload.date||null,deadline:payload.deadline||null,ended:payload.ended||null,year:payload.year,archived:payload.archived||false,trashed:payload.trashed||false,updated_at:new Date().toISOString(),user_id:currentUser.id};
   if(isNew){const{data,error}=await db.from('projects').insert(row).select().single();if(error){toast('Erreur création','error');return null;}return data.id;}
   const{error}=await db.from('projects').update(row).eq('id',payload.id);if(error){toast('Erreur mise à jour','error');return null;}return payload.id;
 }
@@ -437,23 +437,25 @@ function confirmYearModal(){
 function renderSidebar(){
   ['pro','perso'].forEach(cat=>{
     const container=g('yl-'+cat);if(!container)return;
-    const years=[...new Set(projects.filter(p=>p.cat===cat).map(p=>p.year))].sort((a,b)=>b-a);
+    const years=[...new Set(projects.filter(p=>p.cat===cat&&!p.trashed).map(p=>p.year))].sort((a,b)=>b-a);
     container.innerHTML=years.map(y=>{
-      const count=projects.filter(p=>p.cat===cat&&p.year===y&&!p.archived).length;
-      const overdue=projects.filter(p=>p.cat===cat&&p.year===y&&!p.archived&&p.deadline&&dlStatus(p.deadline)==='over'&&p.status!=='done').length;
+      const count=projects.filter(p=>p.cat===cat&&p.year===y&&!p.archived&&!p.trashed).length;
+      const overdue=projects.filter(p=>p.cat===cat&&p.year===y&&!p.archived&&!p.trashed&&p.deadline&&dlStatus(p.deadline)==='over'&&p.status!=='done').length;
       const active=selectedCat===cat&&selectedYear===y;
       return`<div class="year-item ${active?'active':''}" data-y="${y}" data-c="${cat}"><span>${y}${overdue?` <span class="overdue-badge">☠${overdue}</span>`:''}</span><span class="year-count">${count}</span></div>`;
     }).join('')+`<div class="year-item year-item-add" data-y="new" data-c="${cat}"><i class="ti ti-plus" style="font-size:.65rem"></i> Année</div>`;
     container.querySelectorAll('.year-item').forEach(item=>{
       item.addEventListener('click',()=>{
         if(item.dataset.y==='new'){openYearModal(cat);return;}
-        selectedYear=parseInt(item.dataset.y);selectedCat=item.dataset.c;localStorage.setItem('lf-year',selectedYear);localStorage.setItem('lf-cat',selectedCat);showDashboard=false;renderSidebar();renderView();
+        closeAllModals();
+        selectedYear=parseInt(item.dataset.y);selectedCat=item.dataset.c;localStorage.setItem('lf-year',selectedYear);localStorage.setItem('lf-cat',selectedCat);showDashboard=false;showTrash=false;renderSidebar();renderView();
       });
     });
   });
   g('btn-dashboard')?.classList.toggle('active',showDashboard);
   const ab=g('toggle-archived');if(ab){ab.querySelector('span').textContent=showArchived?'Masquer archivés':'Voir archivés';ab.classList.toggle('active',showArchived);}
-  const title=g('topbar-title');if(title)title.textContent=`${selectedCat==='pro'?'Pro':'Perso'} · ${selectedYear}${showArchived?' · Archives':showDashboard?' · Stats':''}`;
+  const tb=g('btn-trash');if(tb){tb.classList.toggle('active',showTrash);const count=projects.filter(p=>p.trashed).length;const badge=tb.querySelector('.tool-badge');if(badge)badge.textContent=count||'';}
+  const title=g('topbar-title');if(title)title.textContent=`${selectedCat==='pro'?'Pro':'Perso'} · ${selectedYear}${showTrash?' · Corbeille':showArchived?' · Archives':showDashboard?' · Stats':''}`;
   const logout=g('btn-logout');if(logout&&currentUser)logout.title=currentUser.email;
 }
 
@@ -467,8 +469,8 @@ function updateClearBtn(){
   });
 }
 function renderView(){
-  const title=g('topbar-title');if(title)title.textContent=`${selectedCat==='pro'?'Pro':'Perso'} · ${selectedYear}${showArchived?' · Archives':showDashboard?' · Stats':''}`;
-  if(showDashboard)renderDashboard();else renderProjects();
+  const title=g('topbar-title');if(title)title.textContent=`${selectedCat==='pro'?'Pro':'Perso'} · ${selectedYear}${showTrash?' · Corbeille':showArchived?' · Archives':showDashboard?' · Stats':''}`;
+  if(showTrash)renderTrash();else if(showDashboard)renderDashboard();else renderProjects();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -508,7 +510,7 @@ function setupSubDragDrop(subContainer,parentId){
    ══════════════════════════════════════════════════════════ */
 function getFiltered(){
   const q=g('search').value.toLowerCase(),st=g('filter-status').value,imp=g('filter-imp').value,sort=g('sort-by').value;
-  let list=projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&(showArchived?p.archived:!p.archived));
+  let list=projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&!p.trashed&&(showArchived?p.archived:!p.archived));
   if(q)list=list.filter(p=>p.name.toLowerCase().includes(q)||p.number.toLowerCase().includes(q)||(p.editor&&p.editor.toLowerCase().includes(q))||(p.client&&p.client.toLowerCase().includes(q))||p.notes.some(n=>n.text.toLowerCase().includes(q))||(p.subprojects&&p.subprojects.some(s=>s.notes&&s.notes.some(n=>n.text.toLowerCase().includes(q)))));
   const ed=g('filter-editor')?.value||'';
   if(st)list=list.filter(p=>p.status===st);if(imp)list=list.filter(p=>p.importance===imp);
@@ -572,14 +574,14 @@ function renderProjects(){
   const list=getFiltered(),container=g('project-list');if(!container)return;
   // Update result count + filter active states
   const rc=g('result-count');
-  const total=projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&(showArchived?p.archived:!p.archived)).length;
+  const total=projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&!p.trashed&&(showArchived?p.archived:!p.archived)).length;
   if(rc){rc.textContent=list.length<total?`${list.length} / ${total}`:list.length>0?`${list.length}`:'';rc.style.display=list.length<total?'inline':'none';}
   updateClearBtn();
   // Refresh editor filter options
   const edSel=g('filter-editor');
   if(edSel){
     const curEd=edSel.value;
-    const editors=[...new Set(projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&p.editor).map(p=>p.editor.trim()).filter(Boolean))].sort();
+    const editors=[...new Set(projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&!p.trashed&&p.editor).map(p=>p.editor.trim()).filter(Boolean))].sort();
     edSel.innerHTML='<option value="">Éditeur</option>'+editors.map(e=>`<option value="${esc(e)}" ${curEd===e?'selected':''}>${esc(e)}</option>`).join('');
   }
   const isDraggable=true;
@@ -943,20 +945,52 @@ async function toggleArchiveSub(parentId,subId){
 async function confirmDelete(id){
   const p=projects.find(x=>x.id===id);
   openConfirm(
-    'Supprimer ce projet ?',
-    `<strong>${esc(p?.number)} — ${esc(p?.name)}</strong><br><span style="color:var(--s-sent-fg);font-size:var(--fs-xxs)">Action irréversible. Sous-projets et notes inclus.</span>`,
+    'Mettre ce projet à la corbeille ?',
+    `<strong>${esc(p?.number)} — ${esc(p?.name)}</strong><br><span style="color:var(--s-sent-fg);font-size:var(--fs-xxs)">Le projet sera déplacé dans la corbeille et pourra être restauré.</span>`,
     async()=>{
       const card=g('project-list')?.querySelector(`[data-pid="${id}"].proj-card`);
-      const doDelete=async()=>{
-        if(await deleteProjectFromDb(id)){
-          projects=projects.filter(pr=>pr.id!==id);expandedIds.delete(id);
-          toast('Projet supprimé');renderSidebar();renderView();
+      const doTrash=async()=>{
+        p.trashed=true;
+        if(await saveProject({...p},false)){
+          expandedIds.delete(id);
+          toast('Projet déplacé dans la corbeille');renderSidebar();renderView();
         }
       };
-      if(card){card.classList.add('card-removing');setTimeout(doDelete,220);}
-      else{await doDelete();}
+      if(card){card.classList.add('card-removing');setTimeout(doTrash,220);}
+      else{await doTrash();}
     }
   );
+}
+async function restoreFromTrash(id){
+  const p=projects.find(x=>x.id===id);if(!p)return;
+  p.trashed=false;
+  if(await saveProject({...p},false)){toast('Projet restauré');renderSidebar();renderTrash();}
+}
+async function deleteForever(id){
+  const p=projects.find(x=>x.id===id);
+  openConfirm(
+    'Supprimer définitivement ce projet ?',
+    `<strong>${esc(p?.number)} — ${esc(p?.name)}</strong><br><span style="color:var(--s-sent-fg);font-size:var(--fs-xxs)">Action irréversible. Sous-projets et notes inclus.</span>`,
+    async()=>{
+      if(await deleteProjectFromDb(id)){
+        projects=projects.filter(pr=>pr.id!==id);
+        toast('Projet supprimé définitivement');renderSidebar();renderTrash();
+      }
+    }
+  );
+}
+function renderTrash(){
+  const list=projects.filter(p=>p.trashed);
+  g('project-list').innerHTML=list.length?list.map(p=>`
+    <div data-pid="${p.id}" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border-light);opacity:.8">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.93rem;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.number)} — ${esc(p.name)}</div>
+      </div>
+      <button class="btn-icon" data-action="trash-restore" data-pid="${p.id}" title="Restaurer"><i class="ti ti-arrow-back-up"></i></button>
+      <button class="btn-icon" data-action="trash-delete" data-pid="${p.id}" title="Supprimer définitivement" style="color:var(--s-sent-fg)"><i class="ti ti-trash-x"></i></button>
+    </div>`).join(''):`<div class="empty-state"><i class="ti ti-trash"></i><p>La corbeille est vide</p></div>`;
+  g('project-list').querySelectorAll('[data-action="trash-restore"]').forEach(b=>b.addEventListener('click',()=>restoreFromTrash(b.dataset.pid)));
+  g('project-list').querySelectorAll('[data-action="trash-delete"]').forEach(b=>b.addEventListener('click',()=>deleteForever(b.dataset.pid)));
 }
 async function confirmDeleteSub(parentId,subId){
   const parent=projects.find(x=>x.id===parentId);const s=parent?.subprojects.find(x=>x.id===subId);
@@ -1035,6 +1069,7 @@ function watchFieldChanges(){
 }
 function openModal(title,icon='ti-folder'){g('modal-title').innerHTML=`<i class="ti ${icon}"></i>${title}`;g('modal-overlay').classList.add('open');}
 function closeModal(){g('modal-overlay').classList.remove('open');resetModal();}
+function closeAllModals(){closeModal();closeSettings();closeYearModal();closeNoteModal();closeConfirm();closeInlineStatus();closeCtxMenu();}
 function syncSlider(status){
   const auto=AUTO_PROG[status];if(auto===null)return;
   if(!sliderManual){g('f-progress').value=auto;g('f-progress-val').textContent=`${auto}%`;}
@@ -1224,7 +1259,7 @@ async function handleSave(){
    ══════════════════════════════════════════════════════════ */
 function renderDashboard(){
   const container=g('project-list');
-  const scope=projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&!p.archived);
+  const scope=projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&!p.archived&&!p.trashed);
   const byStatus={};Object.keys(STATUS_LABELS).forEach(k=>byStatus[k]=0);scope.forEach(p=>{if(byStatus[p.status]!==undefined)byStatus[p.status]++;});
   const overdue=scope.filter(p=>p.deadline&&dlStatus(p.deadline)==='over'&&p.status!=='done');
   const dueSoon=scope.filter(p=>p.deadline&&dlStatus(p.deadline)==='warn'&&p.status!=='done');
@@ -1260,7 +1295,7 @@ function renderDashboard(){
       <div class="dash-card dash-sm"><div class="dash-title"><i class="ti ti-trending-up"></i> Avancement</div><div class="dash-big-num">${avgProg}<span style="font-size:1rem;font-weight:400;color:var(--text-tertiary)">%</span></div><div style="font-size:var(--fs-xxxs);color:var(--text-tertiary);margin-top:4px">${active.length} projet${active.length>1?'s':''} actif${active.length>1?'s':''}</div>${pb(avgProg,'ongoing')}</div>
       <div class="dash-card dash-sm"><div class="dash-title"><i class="ti ti-flag"></i> Importance</div>${[['high','var(--imp-high)'],['medium','var(--imp-med)'],['low','var(--imp-low)']].map(([k,c])=>`<div class="dash-imp-row"><span style="background:${c};width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0"></span><span style="font-size:var(--fs-xs);flex:1">${IMP_LBL[k]}</span><div style="width:70px;height:5px;background:var(--bg-hover);border-radius:3px;overflow:hidden"><div style="width:${total?Math.round((impMap[k]/total)*100):0}%;height:100%;background:${c};border-radius:3px"></div></div><strong style="font-size:var(--fs-xs);min-width:18px;text-align:right">${impMap[k]}</strong></div>`).join('')}</div>
       <div class="dash-card"><div class="dash-title"><i class="ti ti-users"></i> Top clients</div>${topClients.length===0?`<div class="dash-empty">Aucun client</div>`:topClients.map(([c,n])=>`<div class="dash-client-row"><i class="ti ti-user" style="color:var(--text-tertiary)"></i><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c}</span><span class="dash-badge">${n}</span></div>`).join('')}</div>
-      <div class="dash-card dash-sm"><div class="dash-title"><i class="ti ti-list-check"></i> Résumé</div><div class="dash-summary-row"><span>Total</span><strong>${total}</strong></div><div class="dash-summary-row"><span>Terminés</span><strong style="color:var(--s-done-fg)">${done}</strong></div><div class="dash-summary-row"><span>En retard</span><strong style="color:var(--dl-over)">${overdue.length}</strong></div><div class="dash-summary-row"><span>Deadline proche</span><strong style="color:var(--dl-warn)">${dueSoon.length}</strong></div><div class="dash-summary-row"><span>Archivés</span><strong style="color:var(--text-tertiary)">${projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&p.archived).length}</strong></div></div>
+      <div class="dash-card dash-sm"><div class="dash-title"><i class="ti ti-list-check"></i> Résumé</div><div class="dash-summary-row"><span>Total</span><strong>${total}</strong></div><div class="dash-summary-row"><span>Terminés</span><strong style="color:var(--s-done-fg)">${done}</strong></div><div class="dash-summary-row"><span>En retard</span><strong style="color:var(--dl-over)">${overdue.length}</strong></div><div class="dash-summary-row"><span>Deadline proche</span><strong style="color:var(--dl-warn)">${dueSoon.length}</strong></div><div class="dash-summary-row"><span>Archivés</span><strong style="color:var(--text-tertiary)">${projects.filter(p=>p.cat===selectedCat&&p.year===selectedYear&&p.archived&&!p.trashed).length}</strong></div></div>
     </div>
     <div class="dash-row">
       ${selectedCat==='pro'?`<div class="dash-card"><div class="dash-title"><i class="ti ti-user-circle"></i> Par éditeur</div>${topEditors.length===0?`<div class="dash-empty">Aucun éditeur</div>`:topEditors.map(([e,n])=>`<div class="dash-client-row"><i class="ti ti-pencil" style="color:var(--text-tertiary)"></i><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e}</span><span class="dash-badge">${n}</span></div>`).join('')}</div>`:''}
@@ -1275,6 +1310,7 @@ function renderDashboard(){
    ══════════════════════════════════════════════════════════ */
 function openDetailPanel(id){
   if(!id)return;
+  closeAllModals();
   selectedDetailId=id;
   const panel=g('detail-panel');
   if(!panel)return;
@@ -1704,9 +1740,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     g(id)?.addEventListener('change',applyDrawerFilters);
   });
 
-  g('btn-dashboard')?.addEventListener('click',()=>{showDashboard=!showDashboard;g('btn-dashboard')?.classList.toggle('active',showDashboard);renderView();});
+  g('btn-dashboard')?.addEventListener('click',()=>{closeAllModals();showDashboard=!showDashboard;showTrash=false;renderSidebar();renderView();});
   g('btn-export')?.addEventListener('click',exportCSV);
-  g('toggle-archived')?.addEventListener('click',()=>{showArchived=!showArchived;renderSidebar();renderView();});
+  g('toggle-archived')?.addEventListener('click',()=>{closeAllModals();showArchived=!showArchived;showTrash=false;renderSidebar();renderView();});
+  g('btn-trash')?.addEventListener('click',()=>{closeAllModals();showTrash=!showTrash;showDashboard=false;renderSidebar();renderView();});
 
   g('btn-settings')?.addEventListener('click',openSettings);
   g('btn-settings-hdr')?.addEventListener('click',openSettings);
@@ -1732,9 +1769,10 @@ document.addEventListener('DOMContentLoaded',()=>{
       document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
       if(view==='new'){openNewProject();document.querySelector(`.bnav-item[data-cat="${selectedCat}"]`)?.classList.add('active');return;}
       if(view==='settings'){openSettings();return;}
+      closeAllModals();
       btn.classList.add('active');
       if(view==='stats'){showDashboard=true;renderView();return;}
-      if(cat){showDashboard=false;selectedCat=cat;const years=[...new Set(projects.filter(p=>p.cat===cat).map(p=>p.year))].sort((a,b)=>b-a);if(years.length)selectedYear=years[0];localStorage.setItem('lf-cat',selectedCat);localStorage.setItem('lf-year',selectedYear);renderSidebar();renderView();}
+      if(cat){showDashboard=false;showTrash=false;selectedCat=cat;const years=[...new Set(projects.filter(p=>p.cat===cat&&!p.trashed).map(p=>p.year))].sort((a,b)=>b-a);if(years.length)selectedYear=years[0];localStorage.setItem('lf-cat',selectedCat);localStorage.setItem('lf-year',selectedYear);renderSidebar();renderView();}
     });
   });
 
@@ -1763,12 +1801,18 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   // Keyboard
   document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){closeAllModals();return;}
+    if(e.key==='Enter'&&!e.shiftKey&&e.target.tagName!=='TEXTAREA'){
+      if(g('modal-overlay')?.classList.contains('open')){e.preventDefault();g('btn-save')?.click();return;}
+      if(g('confirm-overlay')?.classList.contains('open')){e.preventDefault();g('confirm-ok')?.click();return;}
+      if(g('year-modal-overlay')?.classList.contains('open')){e.preventDefault();confirmYearModal();return;}
+      if(g('note-overlay')?.classList.contains('open')){e.preventDefault();g('note-btn-save')?.click();return;}
+    }
     if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
     if(e.key==='n'||e.key==='N'){e.preventDefault();openNewProject();}
-    if(e.key==='d'||e.key==='D'){showDashboard=!showDashboard;g('btn-dashboard')?.classList.toggle('active',showDashboard);renderView();}
+    if(e.key==='d'||e.key==='D'){showDashboard=!showDashboard;showTrash=false;renderSidebar();renderView();}
     if(e.key==='p'||e.key==='P')openSettings();
     if(e.key==='e'||e.key==='E')exportCSV();
-    if(e.key==='Escape'){closeModal();closeSettings();closeInlineStatus();closeCtxMenu();}
   });
 
   initAuthListener();
