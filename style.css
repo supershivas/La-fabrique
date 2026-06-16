@@ -1,5 +1,9 @@
 /* ============================================================
    LA FABRIQUE — style.css  v8
+   Valeurs partagées avec Idée : voir design-tokens.json
+   (couleurs accent fixe, radii, sidebar, kbd, search) — à
+   resynchroniser manuellement avec idee/design-tokens.json
+   si l'une des deux valeurs change.
    ============================================================ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
