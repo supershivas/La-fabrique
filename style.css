@@ -101,9 +101,10 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .sidebar-hdr-btn:hover{color:var(--sidebar-fg)!important;background:var(--sidebar-hover)!important}
 
 .sidebar-new-wrap{padding:8px 8px 4px;flex-shrink:0}
-.btn-primary.btn-new-sidebar{width:100%;justify-content:flex-start;padding:0 12px;gap:8px;height:40px;font-size:.875rem;font-weight:500;border-radius:var(--radius-xl);background:#C0392B!important;color:#fff!important}
+.btn-primary.btn-new-sidebar{position:relative;width:100%;justify-content:center;padding:0 12px;gap:8px;height:40px;font-size:.875rem;font-weight:500;border-radius:var(--radius-xl);background:#C0392B!important;color:#fff!important}
 .btn-primary.btn-new-sidebar:hover{background:#9B2D22!important}
-.btn-new-sidebar span{flex:1;text-align:left}
+.btn-new-sidebar span{flex:none;text-align:center}
+.btn-new-sidebar .sidebar-kbd{position:absolute;right:12px;top:50%;transform:translateY(-50%)}
 
 /* Search dans la sidebar (Bear-style) */
 .sidebar-search-wrap {
