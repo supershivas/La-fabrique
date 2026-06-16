@@ -5,7 +5,7 @@
 
 :root{
   --font-sans:'Inter',sans-serif;--font-title:'Playfair Display',Georgia,serif;--font-mono:'DM Mono',monospace;
-  --sidebar-w:240px;--sidebar-min:180px;--sidebar-max:400px;
+  --sidebar-w:264px;--sidebar-min:200px;--sidebar-max:420px;
   --header-h:52px;--topbar-h:50px;--bottomnav-h:62px;
   --accent:#C0392B;--accent-light:#FEF2F1;--accent-dark:#9B2D22;
   --bg:#F7F5F2;--bg-card:#FFFFFF;--bg-hover:#F0EDE8;--bg-detail:#F4F1ED;--bg-input:#FFFFFF;
@@ -97,17 +97,17 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .sidebar-hdr-btn:hover{color:var(--sidebar-fg)!important;background:var(--sidebar-hover)!important}
 
 .sidebar-new-wrap{padding:8px 8px 4px;flex-shrink:0}
-.btn-new-sidebar{width:100%;justify-content:center;height:36px;font-size:0.875rem;border-radius:var(--radius-xl)}
+.btn-new-sidebar{width:100%;justify-content:center;gap:8px;height:40px;font-size:.875rem;font-weight:500;border-radius:var(--radius-xl)}
 
 /* Search dans la sidebar (Bear-style) */
 .sidebar-search-wrap {
   position: relative;
-  padding: 4px 8px 6px;
+  padding: 8px 8px 8px;
   flex-shrink: 0;
 }
 .sidebar-search-wrap .ti-search {
   position: absolute;
-  left: 16px;
+  left: 18px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--sidebar-icon);
@@ -115,12 +115,12 @@ input:disabled{opacity:.5;cursor:not-allowed}
   pointer-events: none;
 }
 .sidebar-search-wrap #search {
-  background: rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.10);
   border: 1px solid rgba(255,255,255,0.10);
   color: var(--sidebar-fg);
   border-radius: var(--radius-md);
-  padding: 0 8px 0 28px;
-  height: 28px;
+  padding: 0 10px 0 30px;
+  height: 36px;
   width: 100%;
   font-size: var(--fs-xs);
 }
@@ -161,14 +161,15 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .btn-logout:hover{background:rgba(192,57,43,.25)!important;color:#e8887e!important;border-color:transparent!important}
 .sidebar-kbd {
   font-size: 10px;
-  padding: 1px 5px;
+  padding: 2px 6px;
   border-radius: 4px;
   font-family: var(--font-mono);
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.20);
+  border: 1px solid rgba(255,255,255,0.30);
   color: rgba(255,255,255,0.6);
   line-height: 1.6;
   flex-shrink: 0;
+  opacity: .6;
 }
 #sidebar-resizer{position:absolute;top:0;right:-3px;width:6px;height:100%;cursor:col-resize;z-index:10;background:transparent;transition:background .15s}
 #sidebar-resizer:hover,#sidebar-resizer.resizing{background:var(--accent);opacity:.5}
