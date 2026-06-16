@@ -1785,6 +1785,14 @@ document.addEventListener('DOMContentLoaded',()=>{
   g('project-list')?.addEventListener('scroll',()=>{positionDetailPanel();drawConnector();});
   window.addEventListener('resize',()=>{positionDetailPanel();drawConnector();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&selectedDetailId&&!g('modal-overlay')?.classList.contains('open'))closeDetailPanel();});
+  document.addEventListener('click',e=>{
+    if(!selectedDetailId)return;
+    const panel=g('detail-panel');
+    if(panel?.contains(e.target))return;
+    if(e.target.closest('.proj-card'))return; // card clicks handle their own toggle
+    if(e.target.closest('#modal-overlay,#note-overlay,#confirm-overlay,#year-modal-overlay,#settings-overlay,.isd-dropdown,.ctx-menu,#detail-connector'))return;
+    closeDetailPanel();
+  });
 
   // Date masks supprimés — champs type="date" natifs
 
