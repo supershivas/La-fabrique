@@ -118,7 +118,7 @@ input:disabled{opacity:.5;cursor:not-allowed}
   top: 50%;
   transform: translateY(-50%);
   color: var(--sidebar-icon);
-  font-size: .85rem;
+  font-size: 13px;
   pointer-events: none;
 }
 .sidebar-search-wrap #search {
@@ -129,7 +129,7 @@ input:disabled{opacity:.5;cursor:not-allowed}
   padding: 0 10px 0 30px;
   height: 36px;
   width: 100%;
-  font-size: var(--fs-xs);
+  font-size: 13px;
 }
 .sidebar-search-wrap #search::placeholder { color: var(--sidebar-muted); }
 .sidebar-search-wrap #search:focus {
