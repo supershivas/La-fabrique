@@ -11,7 +11,7 @@
     "sidebarHover": "rgba(255,255,255,0.07)",
     "sidebarSelected": "rgba(192,57,43,0.22)",
     "sidebarSelectedFg": "#E8887E",
-    "sidebarBorder": "rgba(255,255,255,0.07)"
+    "sidebarBorder": "rgba(196,201,209,0.18)"
   },
   "radii": {
     "sm": "6px",
@@ -71,7 +71,9 @@
   },
   "sidebarDivider": {
     "thickness": "1px",
-    "margin": "4px 0"
+    "margin": "4px 0",
+    "color": "rgba(196,201,209,0.18)",
+    "_comment": "Divider argent élégant — identique à colors.sidebarBorder, utilisé pour toutes les séparations horizontales/verticales de la sidebar dans les deux apps."
   },
   "sidebarScroll": {
     "padding": "8px"
