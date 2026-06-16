@@ -53,5 +53,31 @@
     "background": "rgba(255,255,255,0.20)",
     "border": "rgba(255,255,255,0.30)",
     "opacity": 0.6
+  },
+  "sidebarHeader": {
+    "minHeight": "52px",
+    "padding": "0 12px",
+    "iconButtonSize": "32px",
+    "iconButtonRadius": "8px",
+    "iconSize": "15px"
+  },
+  "sidebarNavRow": {
+    "padding": "8px 12px",
+    "fontSize": "0.875rem",
+    "fontWeight": 500,
+    "gap": "8px",
+    "iconSize": "15px",
+    "borderRadius": "6px"
+  },
+  "sidebarDivider": {
+    "thickness": "1px",
+    "margin": "4px 0"
+  },
+  "sidebarScroll": {
+    "padding": "8px"
+  },
+  "sidebarResizer": {
+    "width": "4px",
+    "hoverColor": "var(--accent)"
   }
 }
