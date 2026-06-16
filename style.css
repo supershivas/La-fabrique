@@ -132,7 +132,7 @@ input:disabled{opacity:.5;cursor:not-allowed}
 /* ============================================================
    PROJECT CARD — v8 redesign
    ============================================================ */
-#project-list{flex:1;overflow-y:auto;padding:10px 12px;max-width:900px;width:100%;margin:0 auto}
+#project-list{flex:1;overflow-y:auto;padding:10px 12px;max-width:1200px;width:100%;margin:0 auto}
 #detail-panel{position:fixed;right:auto;top:80px;width:var(--detail-panel-w,400px);max-height:calc(100vh - 96px);overflow:hidden;transition:opacity .18s ease,transform .2s cubic-bezier(.4,0,.2,1),top .18s ease;background:var(--bg-card);border:1px solid var(--border-md);border-left-width:3px;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);display:flex;flex-direction:row;z-index:100;opacity:0;transform:translateX(10px) scale(0.98);pointer-events:none;transform-origin:left center}
 #detail-panel.open{opacity:1;transform:none;pointer-events:auto}
 #detail-panel.panel-overlay{transform-origin:right center;max-height:calc(100vh - var(--header-h) - var(--topbar-h) - 16px)}
