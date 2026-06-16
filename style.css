@@ -148,13 +148,15 @@ input:disabled{opacity:.5;cursor:not-allowed}
 .year-item.active .year-count{background:rgba(192,57,43,.35);color:var(--sidebar-selected-fg)}
 .year-item-add{font-size:var(--fs-xxxs);color:var(--sidebar-muted)}
 .overdue-badge{color:var(--dl-over);font-size:var(--fs-xxxs)}
-.sidebar-tools{display:flex;flex-direction:column;gap:1px;padding:0}
+.sidebar-tools{display:flex;flex-direction:column;gap:1px;padding:8px;flex-shrink:0;border-top:1px solid var(--sidebar-border)}
 .btn-tool{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;background:none;border:none;cursor:pointer;font-size:.875rem;font-weight:500;color:rgba(255,255,255,.75);transition:background .12s,color .12s;width:100%;text-align:left}
 .btn-tool:hover{background:var(--sidebar-hover);color:var(--sidebar-fg)}
 .btn-tool i{font-size:15px;flex-shrink:0;color:var(--sidebar-icon)}
 .btn-tool:hover i{color:var(--sidebar-fg)}
 .btn-tool.active{background:var(--sidebar-selected);color:var(--sidebar-selected-fg)}
 .btn-tool.active i{color:var(--sidebar-selected-fg)}
+.btn-tool span:nth-child(2){flex:1}
+.tool-badge{font-size:.75rem;color:rgba(255,255,255,.5)}
 #sidebar-footer{padding:8px;border-top:1px solid var(--sidebar-border);flex-shrink:0}
 .db-status{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-xxxs);font-weight:500;padding:5px 8px;border-radius:6px;width:100%;transition:background .2s,color .2s}
 .db-status i{font-size:var(--fs-xs);flex-shrink:0}
